@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,7 +23,7 @@ interface RegistrationFiltersProps {
   onFilteredResults: (filtered: Registration[]) => void
 }
 
-export const RegistrationFilters = ({ registrations, onFilteredResults }: RegistrationFiltersProps) => {
+function RegistrationFiltersContent({ registrations, onFilteredResults }: RegistrationFiltersProps) {
   const searchParams = useSearchParams()
   
   const [searchQuery, setSearchQuery] = useState('')
@@ -260,19 +260,15 @@ export const RegistrationFilters = ({ registrations, onFilteredResults }: Regist
           </div>
         </div>
       </div>
-
-      {/* Results count */}
-      <div className='mt-4 pt-4 border-t'>
-        <p className='text-sm text-muted-foreground'>
-          <strong className='text-foreground'>{filteredRegistrations.length}</strong> бүртгэл олдлоо
-          {activeFiltersCount > 0 && (
-            <span>
-              {' '}
-              (нийт <strong className='text-foreground'>{registrations.length}</strong> бүртгэлээс)
-            </span>
-          )}
-        </p>
-      </div>
     </CardBox>
   )
 }
+
+export const RegistrationFilters = (props: RegistrationFiltersProps) => {
+  return (
+    <Suspense fallback={<div className='p-6 text-center'>Loading filters...</div>}>
+      <RegistrationFiltersContent {...props} />
+    </Suspense>
+  )
+}
+

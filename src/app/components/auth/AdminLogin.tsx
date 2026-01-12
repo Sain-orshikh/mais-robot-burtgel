@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import FullLogo from '@/app/(DashboardLayout)/layout/shared/logo/FullLogo'
 import CardBox from '../shared/CardBox'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -49,7 +48,7 @@ export const AdminLogin = () => {
         <div className='md:min-w-[450px] min-w-max'>
           <CardBox>
             <div className='flex justify-center mb-4'>
-              <FullLogo />
+              <div className='text-4xl font-bold text-primary'>MAIS</div>
             </div>
             <h2 className='text-2xl font-bold text-center mb-2'>
               Админ Удирдлагын Систем

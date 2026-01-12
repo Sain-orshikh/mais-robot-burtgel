@@ -1,6 +1,6 @@
 'use client'
 
-import { Settings, Search, Bell, User, X, Menu } from 'lucide-react'
+import { Settings, Search, Bell, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useState } from 'react'

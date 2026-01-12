@@ -3,7 +3,6 @@ import type { Metadata } from 'next'
 import { DM_Sans } from 'next/font/google'
 import './css/globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
-import ServiceWorkerRegister from '@/app/components/service-worker/ServiceWorkerRegister'
 import { Toaster } from '@/components/ui/toaster'
 
 const dmSans = DM_Sans({
@@ -35,7 +34,6 @@ export default function RootLayout({
           defaultTheme='system'
           enableSystem
           disableTransitionOnChange>
-          <ServiceWorkerRegister />
           {children}
           <Toaster />
         </ThemeProvider>

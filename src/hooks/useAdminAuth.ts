@@ -21,6 +21,7 @@ export const useAdminAuth = () => {
   }
 
   const getAdminUsername = () => {
+    if (typeof window === 'undefined') return 'Admin'
     return localStorage.getItem('adminUsername') || 'Admin'
   }
 
