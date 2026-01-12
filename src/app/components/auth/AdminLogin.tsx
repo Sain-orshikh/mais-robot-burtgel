@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import CardBox from '../shared/CardBox'
+import { ThemeToggle } from '../shared/ThemeToggle'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -44,7 +45,10 @@ export const AdminLogin = () => {
 
   return (
     <>
-      <div className='h-screen w-full flex justify-center items-center bg-lightprimary dark:bg-background'>
+      <div className='h-screen w-full flex justify-center items-center bg-lightprimary dark:bg-background relative'>
+        <div className='absolute top-6 right-6'>
+          <ThemeToggle />
+        </div>
         <div className='md:min-w-[450px] min-w-max'>
           <CardBox>
             <div className='flex justify-center mb-4'>

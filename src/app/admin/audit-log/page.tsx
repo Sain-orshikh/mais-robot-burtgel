@@ -1,6 +1,7 @@
 'use client'
 
 import { useAdminAuth } from '@/hooks/useAdminAuth'
+import { ThemeToggle } from '@/app/components/shared/ThemeToggle'
 import { getAuditLog } from '@/data/auditLog'
 import type { AuditLogEntry } from '@/data/auditLog'
 import {
@@ -19,7 +20,19 @@ import { format } from 'date-fns'
 import CardBox from '@/app/components/shared/CardBox'
 
 export default function AuditLogPage() {
-  useAdminAuth() // Protect this route
+  const { isAuthenticated, isChecking } = useAdminAuth()
+
+  // Show loading state while checking authentication
+  if (isChecking || !isAuthenticated) {
+    return (
+      <div className='min-h-screen bg-background flex items-center justify-center'>
+        <div className='text-center'>
+          <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto'></div>
+          <p className='mt-4 text-muted-foreground'>Уншиж байна...</p>
+        </div>
+      </div>
+    )
+  }
 
   const auditLog = getAuditLog()
 
@@ -37,7 +50,7 @@ export default function AuditLogPage() {
   return (
     <div className='min-h-screen bg-background'>
       {/* Header */}
-      <header className='bg-card border-b border-border sticky top-0 z-10'>
+      <header className='bg-card border-b border-border sticky top-0 z-10 shadow-sm'>
         <div className='container mx-auto px-6 py-4'>
           <div className='flex justify-between items-center'>
             <div className='flex items-center gap-4'>
@@ -56,6 +69,7 @@ export default function AuditLogPage() {
                 </div>
               </div>
             </div>
+            <ThemeToggle />
           </div>
         </div>
       </header>

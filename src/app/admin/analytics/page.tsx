@@ -1,6 +1,7 @@
 'use client'
 
 import { useAdminAuth } from '@/hooks/useAdminAuth'
+import { ThemeToggle } from '@/app/components/shared/ThemeToggle'
 import { mockRegistrations, getRegistrationStats, getCategoryStats, getSchoolStats, COMPETITION_CATEGORIES } from '@/data/mockRegistrations'
 import CardBox from '@/app/components/shared/CardBox'
 import { Button } from '@/components/ui/button'
@@ -17,7 +18,19 @@ import {
 import { Badge } from '@/components/ui/badge'
 
 export default function AnalyticsPage() {
-  useAdminAuth()
+  const { isAuthenticated, isChecking } = useAdminAuth()
+
+  // Show loading state while checking authentication
+  if (isChecking || !isAuthenticated) {
+    return (
+      <div className='min-h-screen bg-background flex items-center justify-center'>
+        <div className='text-center'>
+          <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto'></div>
+          <p className='mt-4 text-muted-foreground'>Уншиж байна...</p>
+        </div>
+      </div>
+    )
+  }
 
   const stats = getRegistrationStats()
   const categoryStats = getCategoryStats()
@@ -46,7 +59,7 @@ export default function AnalyticsPage() {
   return (
     <div className='min-h-screen bg-background'>
       {/* Header */}
-      <header className='bg-card border-b border-border sticky top-0 z-10'>
+      <header className='bg-card border-b border-border sticky top-0 z-10 shadow-sm'>
         <div className='container mx-auto px-6 py-4'>
           <div className='flex items-center justify-between'>
             <div className='flex items-center gap-4'>
@@ -60,6 +73,7 @@ export default function AnalyticsPage() {
                 <p className='text-sm text-muted-foreground'>MAIS Robot Challenge 2026 - Дэлгэрэнгүй мэдээлэл</p>
               </div>
             </div>
+            <ThemeToggle />
           </div>
         </div>
       </header>

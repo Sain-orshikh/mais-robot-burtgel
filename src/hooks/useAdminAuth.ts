@@ -1,16 +1,28 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 export const useAdminAuth = () => {
   const router = useRouter()
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isChecking, setIsChecking] = useState(true)
 
   useEffect(() => {
-    const isAuthenticated = localStorage.getItem('adminAuth')
-    if (!isAuthenticated) {
-      router.push('/admin/login')
+    // Check authentication immediately
+    const checkAuth = () => {
+      if (typeof window !== 'undefined') {
+        const authenticated = localStorage.getItem('adminAuth') === 'true'
+        setIsAuthenticated(authenticated)
+        setIsChecking(false)
+        
+        if (!authenticated) {
+          router.replace('/admin/login')
+        }
+      }
     }
+
+    checkAuth()
   }, [router])
 
   const logout = () => {
@@ -25,5 +37,5 @@ export const useAdminAuth = () => {
     return localStorage.getItem('adminUsername') || 'Admin'
   }
 
-  return { logout, getAdminUsername }
+  return { logout, getAdminUsername, isAuthenticated, isChecking }
 }

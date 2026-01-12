@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
+import { ThemeToggle } from '@/app/components/shared/ThemeToggle'
 import { RegistrationsTable } from '@/app/components/admin/RegistrationsTable'
 import { RegistrationDetailsDialog } from '@/app/components/admin/RegistrationDetailsDialog'
 import { RejectDialog } from '@/app/components/admin/RejectDialog'
@@ -16,8 +17,7 @@ import Link from 'next/link'
 import { useToast } from '@/hooks/use-toast'
 
 export default function RegistrationsPage() {
-  useAdminAuth() // Protect this route
-  const { getAdminUsername } = useAdminAuth()
+  const { getAdminUsername, isAuthenticated, isChecking } = useAdminAuth()
   const { toast } = useToast()
 
   const [registrations, setRegistrations] = useState<Registration[]>(mockRegistrations)
@@ -26,6 +26,18 @@ export default function RegistrationsPage() {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false)
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+
+  // Show loading state while checking authentication
+  if (isChecking || !isAuthenticated) {
+    return (
+      <div className='min-h-screen bg-background flex items-center justify-center'>
+        <div className='text-center'>
+          <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto'></div>
+          <p className='mt-4 text-muted-foreground'>Уншиж байна...</p>
+        </div>
+      </div>
+    )
+  }
 
   const handleViewDetails = (registration: Registration) => {
     setSelectedRegistration(registration)
@@ -137,7 +149,7 @@ export default function RegistrationsPage() {
   return (
     <div className='min-h-screen bg-background'>
       {/* Header */}
-      <header className='bg-card border-b border-border sticky top-0 z-10'>
+      <header className='bg-card border-b border-border sticky top-0 z-10 shadow-sm'>
         <div className='container mx-auto px-6 py-4'>
           <div className='flex justify-between items-center'>
             <div className='flex items-center gap-4'>
@@ -153,7 +165,8 @@ export default function RegistrationsPage() {
                 </p>
               </div>
             </div>
-            <div className='flex gap-2'>
+            <div className='flex gap-2 items-center'>
+              <ThemeToggle />
               <Button variant='outline' size='sm' asChild>
                 <Link href='/admin/audit-log' className='gap-2'>
                   <FileText size={16} />

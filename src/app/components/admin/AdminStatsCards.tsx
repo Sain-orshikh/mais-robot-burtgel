@@ -29,13 +29,13 @@ const StatCard = ({ title, value, description, icon, color, bgColor, href }: Sta
     <CardBox className={`${bgColor} border-none transition-transform hover:scale-105 cursor-pointer`}>
       <div className='flex items-center justify-between'>
         <div>
-          <p className={`text-sm font-medium ${color} opacity-80`}>{title}</p>
+          <p className={`text-sm font-medium ${color} opacity-90`}>{title}</p>
           <h3 className={`text-3xl font-bold ${color} mt-2`}>{value}</h3>
           {description && (
-            <p className={`text-xs ${color} opacity-70 mt-1`}>{description}</p>
+            <p className={`text-xs ${color} opacity-80 mt-1`}>{description}</p>
           )}
         </div>
-        <div className={`${color} opacity-80`}>
+        <div className={`${color} opacity-70`}>
           {icon}
         </div>
       </div>
@@ -69,7 +69,7 @@ export const AdminStatsCards = ({ stats }: AdminStatsCardsProps) => {
       description: 'Бүх бүртгэлүүд',
       icon: <Users size={48} />,
       color: 'text-primary',
-      bgColor: 'bg-primary/10 dark:bg-primary/10',
+      bgColor: 'bg-blue-100 dark:bg-primary/10',
       href: '/admin/registrations'
     },
     {
@@ -77,8 +77,8 @@ export const AdminStatsCards = ({ stats }: AdminStatsCardsProps) => {
       value: stats.approved,
       description: 'Баталгаажсан бүртгэл',
       icon: <CheckCircle size={48} />,
-      color: 'text-success',
-      bgColor: 'bg-success/10 dark:bg-success/10',
+      color: 'text-green-700 dark:text-success',
+      bgColor: 'bg-green-100 dark:bg-success/10',
       href: '/admin/registrations?status=approved'
     },
     {
@@ -86,8 +86,8 @@ export const AdminStatsCards = ({ stats }: AdminStatsCardsProps) => {
       value: stats.pending,
       description: 'Хянах шаардлагатай',
       icon: <Clock size={48} />,
-      color: 'text-warning',
-      bgColor: 'bg-warning/10 dark:bg-warning/10',
+      color: 'text-orange-700 dark:text-warning',
+      bgColor: 'bg-orange-100 dark:bg-warning/10',
       href: '/admin/registrations?status=pending'
     },
     {
@@ -95,8 +95,8 @@ export const AdminStatsCards = ({ stats }: AdminStatsCardsProps) => {
       value: stats.rejected,
       description: 'Цуцлагдсан бүртгэл',
       icon: <XCircle size={48} />,
-      color: 'text-error',
-      bgColor: 'bg-error/10 dark:bg-error/10',
+      color: 'text-red-700 dark:text-error',
+      bgColor: 'bg-red-100 dark:bg-error/10',
       href: '/admin/registrations?status=rejected'
     },
     {
@@ -104,8 +104,8 @@ export const AdminStatsCards = ({ stats }: AdminStatsCardsProps) => {
       value: stats.paymentVerified,
       description: 'Төлбөр шалгагдсан',
       icon: <FileCheck size={48} />,
-      color: 'text-info',
-      bgColor: 'bg-info/10 dark:bg-info/10',
+      color: 'text-cyan-700 dark:text-info',
+      bgColor: 'bg-cyan-100 dark:bg-info/10',
       href: '/admin/registrations?paymentStatus=verified'
     },
     {
@@ -113,8 +113,8 @@ export const AdminStatsCards = ({ stats }: AdminStatsCardsProps) => {
       value: stats.paymentUploaded,
       description: 'Баримт хянах шаардлагатай',
       icon: <Receipt size={48} />,
-      color: 'text-secondary',
-      bgColor: 'bg-secondary/10 dark:bg-secondary/10',
+      color: 'text-purple-700 dark:text-secondary',
+      bgColor: 'bg-purple-100 dark:bg-secondary/10',
       href: '/admin/registrations?paymentStatus=uploaded'
     },
     {
@@ -122,8 +122,8 @@ export const AdminStatsCards = ({ stats }: AdminStatsCardsProps) => {
       value: stats.paymentNotUploaded,
       description: 'Баримт оруулаагүй',
       icon: <AlertCircle size={48} />,
-      color: 'text-muted-foreground',
-      bgColor: 'bg-muted',
+      color: 'text-gray-700 dark:text-muted-foreground',
+      bgColor: 'bg-gray-200 dark:bg-muted',
       href: '/admin/registrations?paymentStatus=not_uploaded'
     },
   ]

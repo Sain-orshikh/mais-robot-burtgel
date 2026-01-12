@@ -76,8 +76,8 @@ export const EventCountdownCard = () => {
           date: formatDate(EVENT_DATES.registrationOpen),
           time: formatTime(EVENT_DATES.registrationOpen),
           countdown: getTimeRemaining(EVENT_DATES.registrationOpen),
-          color: 'text-info',
-          bgColor: 'bg-info/10',
+          color: 'text-cyan-700 dark:text-info',
+          bgColor: 'bg-cyan-100 dark:bg-info/10',
         }
       case 'registration-open':
         return {
@@ -86,8 +86,8 @@ export const EventCountdownCard = () => {
           date: formatDate(EVENT_DATES.registrationClose),
           time: formatTime(EVENT_DATES.registrationClose),
           countdown: getTimeRemaining(EVENT_DATES.registrationClose),
-          color: 'text-warning',
-          bgColor: 'bg-warning/10',
+          color: 'text-orange-700 dark:text-warning',
+          bgColor: 'bg-orange-100 dark:bg-warning/10',
         }
       case 'registration-closed':
         return {
@@ -96,8 +96,8 @@ export const EventCountdownCard = () => {
           date: formatDate(EVENT_DATES.competitionStart),
           time: formatTime(EVENT_DATES.competitionStart),
           countdown: getTimeRemaining(EVENT_DATES.competitionStart),
-          color: 'text-success',
-          bgColor: 'bg-success/10',
+          color: 'text-green-700 dark:text-success',
+          bgColor: 'bg-green-100 dark:bg-success/10',
         }
       case 'competition-started':
         return {
@@ -106,8 +106,8 @@ export const EventCountdownCard = () => {
           date: 'Амжилт хүсье!',
           time: '',
           countdown: null,
-          color: 'text-primary',
-          bgColor: 'bg-primary/10',
+          color: 'text-blue-700 dark:text-primary',
+          bgColor: 'bg-blue-100 dark:bg-primary/10',
         }
     }
   }

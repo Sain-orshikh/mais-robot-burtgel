@@ -1,17 +1,29 @@
 'use client'
 
 import { useAdminAuth } from '@/hooks/useAdminAuth'
+import { AdminHeader } from '@/app/components/admin/AdminHeader'
 import { AdminStatsCards } from '@/app/components/admin/AdminStatsCards'
 import { RecentRegistrations } from '@/app/components/admin/RecentRegistrations'
 import { CategoryDistribution } from '@/app/components/admin/CategoryDistribution'
 import { mockRegistrations, getRegistrationStats, getCategoryStats } from '@/data/mockRegistrations'
 import { Button } from '@/components/ui/button'
-import { LogOut, Users, BarChart3 } from 'lucide-react'
+import { Users, BarChart3 } from 'lucide-react'
 import Link from 'next/link'
 
 export default function AdminDashboard() {
-  useAdminAuth() // Protect this route
-  const { logout, getAdminUsername } = useAdminAuth()
+  const { isAuthenticated, isChecking } = useAdminAuth()
+
+  // Show loading state while checking authentication
+  if (isChecking || !isAuthenticated) {
+    return (
+      <div className='min-h-screen bg-background flex items-center justify-center'>
+        <div className='text-center'>
+          <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto'></div>
+          <p className='mt-4 text-muted-foreground'>Уншиж байна...</p>
+        </div>
+      </div>
+    )
+  }
 
   const stats = getRegistrationStats()
   const categoryStats = getCategoryStats()
@@ -19,34 +31,7 @@ export default function AdminDashboard() {
   return (
     <div className='min-h-screen bg-background'>
       {/* Header */}
-      <header className='bg-card border-b border-border sticky top-0 z-10'>
-        <div className='container mx-auto px-6 py-4'>
-          <div className='flex justify-between items-center'>
-            <div>
-              <h1 className='text-2xl font-bold text-foreground'>
-                Админ удирдлагын систем
-              </h1>
-              <p className='text-sm text-muted-foreground'>
-                MAIS Robot Challenge 2026
-              </p>
-            </div>
-            <div className='flex items-center gap-4'>
-              <span className='text-sm text-muted-foreground'>
-                Сайн байна уу, <strong>{getAdminUsername()}</strong>
-              </span>
-              <Button
-                variant='outline'
-                size='sm'
-                onClick={logout}
-                className='gap-2'
-              >
-                <LogOut size={16} />
-                Гарах
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <AdminHeader />
 
       {/* Main Content */}
       <main className='container mx-auto px-6 py-8'>
