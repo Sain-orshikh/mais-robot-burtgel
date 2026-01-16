@@ -76,10 +76,10 @@ export default function EventsPage() {
               {/* Status */}
               <div className='text-center mt-2'>
                 <span className={`inline-block px-3 py-1 text-sm font-medium rounded-full ${
-                  event.status === 'open' 
+                  event.status === 'upcoming' || event.status === 'ongoing'
                     ? 'text-green-700 bg-green-100' 
-                    : event.status === 'closed'
-                    ? 'text-red-700 bg-red-100'
+                    : event.status === 'completed'
+                    ? 'text-blue-700 bg-blue-100'
                     : 'text-gray-700 bg-gray-100'
                 }`}>
                   {event.status.charAt(0).toUpperCase() + event.status.slice(1)}

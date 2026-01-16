@@ -437,7 +437,7 @@ export default function ContestantLibraryPage() {
               <Label htmlFor='gender'>
                 Gender <span className='text-red-500'>*</span>
               </Label>
-              <Select value={formData.gender} onValueChange={(value) => setFormData({ ...formData, gender: value })}>
+              <Select value={formData.gender} onValueChange={(value) => setFormData({ ...formData, gender: value as 'male' | 'female' })}>
                 <SelectTrigger>
                   <SelectValue placeholder='Select gender' />
                 </SelectTrigger>

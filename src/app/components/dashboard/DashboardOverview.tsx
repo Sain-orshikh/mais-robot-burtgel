@@ -34,8 +34,8 @@ export function DashboardOverview() {
         eventApi.getAll(),
       ])
       
-      // Count upcoming/open events
-      const upcoming = events.filter(e => e.status === 'open' || e.status === 'upcoming').length
+      // Count upcoming events (upcoming or ongoing status)
+      const upcoming = events.filter(e => e.status === 'upcoming' || e.status === 'ongoing').length
       
       setStats({
         contestants: contestants.length,

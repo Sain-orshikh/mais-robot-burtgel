@@ -218,7 +218,7 @@ export default function EventDetailPage() {
 
   // Check if registration is open - allow until 23:59:59 on the deadline date
   const isRegistrationOpen = (() => {
-    if (event.status !== 'open') return false
+    if (event.status !== 'upcoming' && event.status !== 'ongoing') return false
     
     const now = new Date()
     const deadline = new Date(event.registrationDeadline)
@@ -249,10 +249,10 @@ export default function EventDetailPage() {
             <p className='text-gray-600 mb-4'>{event.description}</p>
           </div>
           <span className={`px-4 py-2 rounded-full text-sm font-medium ${
-            event.status === 'open' 
+            event.status === 'upcoming' || event.status === 'ongoing'
               ? 'bg-green-100 text-green-700' 
-              : event.status === 'closed'
-              ? 'bg-red-100 text-red-700'
+              : event.status === 'completed'
+              ? 'bg-blue-100 text-blue-700'
               : 'bg-gray-100 text-gray-700'
           }`}>
             {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
@@ -306,7 +306,7 @@ export default function EventDetailPage() {
         <CardContent>
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
             {CATEGORIES.map((category) => {
-              const eventCategory = event.categories.find(c => c.categoryCode === category.code)
+              const eventCategory = event.categories.find(c => (c as any).categoryCode === category.code || c.name === category.name)
               const myTeamsInCategory = myTeams.filter(t => t.categoryCode === category.code)
               const canRegisterMore = myTeamsInCategory.length < category.maxTeamsPerOrg
               
@@ -544,7 +544,7 @@ export default function EventDetailPage() {
                 // Backend returns populated contestant and coach objects, not just IDs
                 const teamContestants = Array.isArray(team.contestantIds) && typeof team.contestantIds[0] === 'object'
                   ? team.contestantIds as any[] // Already populated
-                  : contestants.filter(c => team.contestantIds.includes(c._id)) // Fallback if IDs only
+                  : contestants.filter(c => (team.contestantIds as any).includes(c._id)) // Fallback if IDs only
                 
                 const teamCoach = typeof team.coachId === 'object'
                   ? team.coachId as any // Already populated
@@ -608,7 +608,7 @@ export default function EventDetailPage() {
       {!isRegistrationOpen && (
         <div className='mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg'>
           <p className='text-yellow-800 text-center'>
-            {event.status === 'closed' 
+            {event.status === 'completed' || event.status === 'cancelled'
               ? 'Registration for this event has closed.' 
               : 'Registration deadline has passed.'}
           </p>
