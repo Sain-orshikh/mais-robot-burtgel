@@ -4,6 +4,7 @@ import { DM_Sans } from 'next/font/google'
 import './css/globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/toaster'
+import { AuthProvider } from '@/hooks/useAuth'
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -29,14 +30,16 @@ export default function RootLayout({
         <meta name="theme-color" content="#5d87ff" />
       </head>
       <body className={`${dmSans.className}`}>
-        <ThemeProvider
-          attribute='class'
-          defaultTheme='system'
-          enableSystem
-          disableTransitionOnChange>
-          {children}
-          <Toaster />
-        </ThemeProvider>
+        <AuthProvider>
+          <ThemeProvider
+            attribute='class'
+            defaultTheme='system'
+            enableSystem
+            disableTransitionOnChange>
+            {children}
+            <Toaster />
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   )

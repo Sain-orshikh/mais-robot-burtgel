@@ -1,63 +1,81 @@
 'use client'
 
-import { Settings, Search, Bell, User } from 'lucide-react'
+import { X, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { useState } from 'react'
+import { useAuth } from '@/hooks/useAuth'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { useRouter } from 'next/navigation'
 
-export function DashboardHeader() {
-  const [searchQuery, setSearchQuery] = useState('')
+interface DashboardHeaderProps {
+  onToggleSidebar: () => void
+}
+
+export function DashboardHeader({ onToggleSidebar }: DashboardHeaderProps) {
+  const { organisation, logout } = useAuth()
+  const router = useRouter()
+
+  const handleLogout = async () => {
+    await logout()
+  }
+
+  const handleProfile = () => {
+    router.push('/dashboard/profile')
+  }
+
+  const handleResetPassword = () => {
+    router.push('/dashboard/settings')
+  }
 
   return (
     <header className='bg-gradient-to-r from-blue-400 to-blue-500 text-white shadow-md'>
       <div className='flex items-center justify-between px-6 py-3'>
-        {/* Left Section - Settings */}
+        {/* Left Section - Close Sidebar Button */}
         <div className='flex items-center space-x-4'>
           <Button
             variant='ghost'
             size='icon'
             className='text-white hover:bg-blue-600'
+            onClick={onToggleSidebar}
+            title='Toggle Sidebar'
           >
-            <Settings size={24} />
+            <X size={24} />
           </Button>
         </div>
 
-        {/* Center Section - Search */}
-        <div className='flex-1 max-w-2xl mx-8'>
-          <div className='relative'>
-            <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-white/60' size={20} />
-            <Input
-              type='text'
-              placeholder='Search...'
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className='w-full bg-white/20 border-white/30 text-white placeholder-white/60 pl-10 focus:bg-white/30 focus:border-white'
-            />
-          </div>
-        </div>
-
-        {/* Right Section - User Actions */}
-        <div className='flex items-center space-x-4'>
-          <Button
-            variant='ghost'
-            size='icon'
-            className='text-white hover:bg-blue-600 relative'
-          >
-            <Bell size={24} />
-            <span className='absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full'></span>
-          </Button>
-          
-          <Button
-            variant='ghost'
-            size='icon'
-            className='bg-yellow-500 hover:bg-yellow-600 text-white rounded-full'
-          >
-            <User size={24} />
-          </Button>
-
+        {/* Right Section - User Info and Actions */}
+        <div className='flex items-center space-x-4 ml-auto'>
           <div className='text-right text-sm'>
-            <div className='font-medium'>shine-od.g@mongolaspiration.edu.mn</div>
+            <div className='font-medium'>{organisation?.email}</div>
           </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant='ghost'
+                size='icon'
+                className='bg-yellow-500 hover:bg-yellow-600 text-white rounded-full'
+              >
+                <User size={24} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end' className='w-48'>
+              <DropdownMenuItem onClick={handleProfile}>
+                My Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleResetPassword}>
+                Reset Password
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout} className='text-red-600'>
+                Log Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>

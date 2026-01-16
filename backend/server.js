@@ -12,6 +12,7 @@ import adminRoutes from "./routes/admin.route.js";
 import eventRoutes from "./routes/event.route.js";
 import analyticsRoutes from "./routes/analytics.route.js";
 import activityRoutes from "./routes/activity.route.js";
+import organisationRoutes from "./routes/organisation.route.js";
 import connectMongoDB from "./db/connectMongoDB.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -65,6 +66,7 @@ app.use('/api/events', eventRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/activities', activityRoutes);
+app.use('/api/organisations', organisationRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

@@ -5,8 +5,10 @@ import { Button } from '@/components/ui/button'
 import CardBox from '@/app/components/shared/CardBox'
 import { UserPlus, Users, Edit } from 'lucide-react'
 import { mockContestants, mockCoaches } from '@/data/mockUserData'
+import { useAuth } from '@/hooks/useAuth'
 
 export function DashboardOverview() {
+  const { organisation } = useAuth()
   const contestantCount = mockContestants.length
   const coachCount = mockCoaches.length
 
@@ -41,13 +43,13 @@ export function DashboardOverview() {
     <div className='container mx-auto px-6 py-8'>
       {/* Organization Header */}
       <div className='mb-8'>
-        <h1 className='text-3xl font-bold text-gray-800'>Mongol aspiration</h1>
+        <h1 className='text-3xl font-bold text-gray-800'>{organisation?.typeDetail || 'Organization'}</h1>
         <p className='text-gray-500 flex items-center gap-2 mt-1'>
-          <span className='text-gray-400'>📍</span> MONGOLIA
+          <span className='text-gray-400'>📍</span> {organisation?.aimag || 'MONGOLIA'}
         </p>
         <div className='flex items-center gap-4 mt-2 text-sm text-gray-600'>
-          <span className='text-blue-500 font-medium'>Type: Company</span>
-          <span>Created on 2023-06-22 16:32</span>
+          <span className='text-blue-500 font-medium'>Type: {organisation?.type || 'Company'}</span>
+          <span>Contact: {organisation?.phoneNumber}</span>
         </div>
       </div>
 
