@@ -7,22 +7,46 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { useAuth } from '@/hooks/useAuth'
+import { useToast } from '@/hooks/use-toast'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { login } = useAuth()
+  const { toast } = useToast()
+  const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.email || !formData.password) {
-      alert('Please fill in all fields')
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all fields',
+        variant: 'destructive',
+      })
       return
     }
-    console.log('Login:', formData)
-    router.push('/dashboard')
+    
+    setIsLoading(true)
+    try {
+      await login(formData.email, formData.password)
+      toast({
+        title: 'Login successful',
+        description: 'Welcome back!',
+      })
+    } catch (error) {
+      toast({
+        title: 'Login failed',
+        description: error instanceof Error ? error.message : 'Please check your credentials',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -67,8 +91,12 @@ export default function LoginPage() {
                 required
               />
             </div>
-            <Button type='submit' className='w-full bg-blue-600 hover:bg-blue-700'>
-              Login
+            <Button 
+              type='submit' 
+              className='w-full bg-blue-600 hover:bg-blue-700'
+              disabled={isLoading}
+            >
+              {isLoading ? 'Logging in...' : 'Login'}
             </Button>
 
             <div className='text-center text-sm text-gray-600 mt-4'>

@@ -15,6 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useAuth } from '@/hooks/useAuth'
+import { useToast } from '@/hooks/use-toast'
 
 const provinces = [
   'Arkhangai',
@@ -40,31 +42,40 @@ const provinces = [
   'Zavkhan',
 ]
 
-const institutionTypes = ['Club', 'School', 'Individual']
+const institutionTypes = ['company', 'school', 'individual']
 
 export default function RegisterPage() {
   const router = useRouter()
+  const { register } = useAuth()
+  const { toast } = useToast()
+  const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
-    institutionType: '',
-    province: '',
-    firstName: '',
-    lastName: '',
-    registerNumber: '',
+    type: '',
+    typeDetail: '',
+    aimag: '',
+    phoneNumber: '',
+    ner: '',
+    ovog: '',
+    registriinDugaar: '',
     email: '',
     password: '',
     confirmPassword: '',
   })
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
+  
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {}
 
-    if (!formData.institutionType) newErrors.institutionType = 'Institution type is required'
-    if (!formData.province) newErrors.province = 'Province is required'
-    if (!formData.firstName) newErrors.firstName = 'First name is required'
-    if (!formData.lastName) newErrors.lastName = 'Last name is required'
-    if (!formData.registerNumber) newErrors.registerNumber = 'Register number is required'
+    if (!formData.type) newErrors.type = 'Institution type is required'
+    if (!formData.typeDetail) newErrors.typeDetail = 'Organization name is required'
+    if (!formData.aimag) newErrors.aimag = 'Province is required'
+    if (!formData.phoneNumber) newErrors.phoneNumber = 'Phone number is required'
+    if (!formData.ner) newErrors.ner = 'First name is required'
+    if (!formData.ovog) newErrors.ovog = 'Last name is required'
+    if (!formData.registriinDugaar) newErrors.registriinDugaar = 'Register number is required'
     if (!formData.email) newErrors.email = 'Email is required'
     if (!formData.password) newErrors.password = 'Password is required'
+    if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters'
     if (!formData.confirmPassword) newErrors.confirmPassword = 'Confirm password is required'
     if (formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match'
@@ -73,15 +84,39 @@ export default function RegisterPage() {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!validateForm()) {
       return
     }
-    console.log('Register:', formData)
-    alert('Registration successful! Please login.')
-    router.push('/login')
+    
+    setIsLoading(true)
+    try {
+      await register({
+        type: formData.type,
+        typeDetail: formData.typeDetail,
+        aimag: formData.aimag,
+        phoneNumber: formData.phoneNumber,
+        ner: formData.ner,
+        ovog: formData.ovog,
+        registriinDugaar: formData.registriinDugaar,
+        email: formData.email,
+        password: formData.password,
+      })
+      toast({
+        title: 'Registration successful',
+        description: 'Your account has been created!',
+      })
+    } catch (error) {
+      toast({
+        title: 'Registration failed',
+        description: error instanceof Error ? error.message : 'Please check your information',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -104,21 +139,21 @@ export default function RegisterPage() {
                 Institution Type <span className='text-red-500'>*</span>
               </Label>
               <RadioGroup
-                value={formData.institutionType}
+                value={formData.type}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, institutionType: value })
+                  setFormData({ ...formData, type: value })
                 }
               >
                 <div className='flex flex-row space-x-6'>
                   {institutionTypes.map((type) => (
                     <div key={type} className='flex items-center space-x-2'>
                       <RadioGroupItem
-                        value={type.toLowerCase()}
-                        id={`institution-${type.toLowerCase()}`}
+                        value={type}
+                        id={`institution-${type}`}
                       />
                       <Label
-                        htmlFor={`institution-${type.toLowerCase()}`}
-                        className='cursor-pointer font-normal'
+                        htmlFor={`institution-${type}`}
+                        className='cursor-pointer font-normal capitalize'
                       >
                         {type}
                       </Label>
@@ -126,20 +161,39 @@ export default function RegisterPage() {
                   ))}
                 </div>
               </RadioGroup>
-              {errors.institutionType && (
-                <p className='text-xs text-red-500'>{errors.institutionType}</p>
+              {errors.type && (
+                <p className='text-xs text-red-500'>{errors.type}</p>
               )}
             </div>
 
-            {/* aimag */}
+            {/* Organization Name */}
             <div className='space-y-2'>
-              <Label htmlFor='province'>
-                Province <span className='text-red-500'>*</span>
+              <Label htmlFor='typeDetail'>
+                Organization Name <span className='text-red-500'>*</span>
+              </Label>
+              <Input
+                id='typeDetail'
+                placeholder='Enter organization name'
+                value={formData.typeDetail}
+                onChange={(e) =>
+                  setFormData({ ...formData, typeDetail: e.target.value })
+                }
+                required
+              />
+              {errors.typeDetail && (
+                <p className='text-xs text-red-500'>{errors.typeDetail}</p>
+              )}
+            </div>
+
+            {/* Province */}
+            <div className='space-y-2'>
+              <Label htmlFor='aimag'>
+                Province (Aimag) <span className='text-red-500'>*</span>
               </Label>
               <Select
-                value={formData.province}
+                value={formData.aimag}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, province: value })
+                  setFormData({ ...formData, aimag: value })
                 }
               >
                 <SelectTrigger>
@@ -153,62 +207,83 @@ export default function RegisterPage() {
                   ))}
                 </SelectContent>
               </Select>
-              {errors.province && (
-                <p className='text-xs text-red-500'>{errors.province}</p>
+              {errors.aimag && (
+                <p className='text-xs text-red-500'>{errors.aimag}</p>
               )}
             </div>
+
+            {/* Phone Number */}
+            <div className='space-y-2'>
+              <Label htmlFor='phoneNumber'>
+                Phone Number <span className='text-red-500'>*</span>
+              </Label>
+              <Input
+                id='phoneNumber'
+                type='tel'
+                placeholder='Enter phone number'
+                value={formData.phoneNumber}
+                onChange={(e) =>
+                  setFormData({ ...formData, phoneNumber: e.target.value })
+                }
+                required
+              />
+              {errors.phoneNumber && (
+                <p className='text-xs text-red-500'>{errors.phoneNumber}</p>
+              )}
+            </div>
+
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div className='space-y-2'>
-                <Label htmlFor='firstName'>
-                  First Name <span className='text-red-500'>*</span>
+                <Label htmlFor='ner'>
+                  First Name (Ner) <span className='text-red-500'>*</span>
                 </Label>
                 <Input
-                  id='firstName'
+                  id='ner'
                   placeholder='Enter first name'
-                  value={formData.firstName}
+                  value={formData.ner}
                   onChange={(e) =>
-                    setFormData({ ...formData, firstName: e.target.value })
+                    setFormData({ ...formData, ner: e.target.value })
                   }
                   required
                 />
-                {errors.firstName && (
-                  <p className='text-xs text-red-500'>{errors.firstName}</p>
+                {errors.ner && (
+                  <p className='text-xs text-red-500'>{errors.ner}</p>
                 )}
               </div>
 
               <div className='space-y-2'>
-                <Label htmlFor='lastName'>
-                  Last Name <span className='text-red-500'>*</span>
+                <Label htmlFor='ovog'>
+                  Last Name (Ovog) <span className='text-red-500'>*</span>
                 </Label>
                 <Input
-                  id='lastName'
+                  id='ovog'
                   placeholder='Enter last name'
-                  value={formData.lastName}
+                  value={formData.ovog}
                   onChange={(e) =>
-                    setFormData({ ...formData, lastName: e.target.value })
+                    setFormData({ ...formData, ovog: e.target.value })
                   }
                   required
                 />
-                {errors.lastName && (
-                  <p className='text-xs text-red-500'>{errors.lastName}</p>
+                {errors.ovog && (
+                  <p className='text-xs text-red-500'>{errors.ovog}</p>
                 )}
               </div>
             </div>
             <div className='space-y-2'>
-              <Label htmlFor='registerNumber'>
-                Register Number <span className='text-red-500'>*</span>
+              <Label htmlFor='registriinDugaar'>
+                National ID (Registriin Dugaar) <span className='text-red-500'>*</span>
               </Label>
               <Input
-                id='registerNumber'
-                placeholder='Enter register number'
-                value={formData.registerNumber}
+                id='registriinDugaar'
+                placeholder='Enter national ID number'
+                value={formData.registriinDugaar}
                 onChange={(e) =>
-                  setFormData({ ...formData, registerNumber: e.target.value })
+                  setFormData({ ...formData, registriinDugaar: e.target.value })
                 }
                 required
               />
-              {errors.registerNumber && (
-                <p className='text-xs text-red-500'>{errors.registerNumber}</p>
+              {errors.registriinDugaar && (
+                <p className='text-xs text-red-500'>{errors.registriinDugaar}</p>
               )}
             </div>
             <div className='space-y-2'>
@@ -268,8 +343,12 @@ export default function RegisterPage() {
               )}
             </div>
 
-            <Button type='submit' className='w-full bg-blue-600 hover:bg-blue-700 mt-6'>
-              Register
+            <Button 
+              type='submit' 
+              className='w-full bg-blue-600 hover:bg-blue-700 mt-6'
+              disabled={isLoading}
+            >
+              {isLoading ? 'Creating Account...' : 'Register'}
             </Button>
           </form>
         </CardContent>

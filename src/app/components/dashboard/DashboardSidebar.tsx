@@ -11,8 +11,7 @@ import {
   MessageSquare, 
   History,
   ChevronDown,
-  ChevronRight,
-  Settings
+  ChevronRight
 } from 'lucide-react'
 import { mockOrganization } from '@/data/mockUserData'
 
@@ -50,12 +49,6 @@ const menuItems = [
     label: 'History Score',
     icon: History,
     href: '/dashboard/history',
-  },
-  {
-    id: 'settings',
-    label: 'Settings',
-    icon: Settings,
-    href: '/dashboard/settings',
   },
 ]
 

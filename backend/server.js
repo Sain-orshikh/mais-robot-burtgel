@@ -6,12 +6,8 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { fileURLToPath } from "url";
 
-import newsRoutes from "./routes/news.route.js";
 import authRoutes from "./routes/auth.route.js";
 import adminRoutes from "./routes/admin.route.js";
-import eventRoutes from "./routes/event.route.js";
-import analyticsRoutes from "./routes/analytics.route.js";
-import activityRoutes from "./routes/activity.route.js";
 import organisationRoutes from "./routes/organisation.route.js";
 import connectMongoDB from "./db/connectMongoDB.js";
 
@@ -33,12 +29,6 @@ const PORT = process.env.PORT || 5000;
 // CORS configuration - allow frontend to access backend
 const allowedOrigins = [
     "http://localhost:3000",
-    "https://mongolaspiration.edu.mn",
-    "http://mongolaspiration.edu.mn",
-    "https://www.mongolaspiration.com",
-    "http://www.mongolaspiration.com",
-    "https://mongolaspiration.com",
-    "http://mongolaspiration.com",
     process.env.FRONTEND_URL
 ].filter(Boolean);
 
@@ -62,15 +52,11 @@ app.use(cookieParser());
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admins', adminRoutes);
-app.use('/api/events', eventRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/news', newsRoutes);
-app.use('/api/activities', activityRoutes);
 app.use('/api/organisations', organisationRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', message: 'MAIS News Backend Server Running' });
+    res.json({ status: 'ok', message: 'MAIS Robot Backend Server Running' });
 });
 
 app.listen(PORT, () => {

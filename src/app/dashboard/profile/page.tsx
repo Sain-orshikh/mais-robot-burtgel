@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,6 +12,7 @@ import { useToast } from '@/hooks/use-toast'
 import { Badge } from '@/components/ui/badge'
 
 export default function ProfilePage() {
+  const router = useRouter()
   const { organisation } = useAuth()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
@@ -89,16 +91,16 @@ export default function ProfilePage() {
         <p className="text-gray-600 mt-1">View and manage your organisation information</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:items-start">
         {/* Left Column - Read-only Info */}
-        <div className="space-y-6">
+        <div className="space-y-4 lg:h-full flex flex-col">
           {/* Organisation ID Card */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Organisation ID</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-4">
+              <div className="text-center py-3">
                 <div className="text-3xl font-bold text-blue-600">{organisation.organisationId}</div>
                 <Badge className="mt-2" variant="secondary">Read Only</Badge>
               </div>
@@ -111,7 +113,7 @@ export default function ProfilePage() {
               <CardTitle className="text-lg">Organisation Type</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-4">
+              <div className="text-center py-3">
                 <Badge className="text-lg px-4 py-2 capitalize" variant="outline">
                   {organisation.type}
                 </Badge>
@@ -121,7 +123,7 @@ export default function ProfilePage() {
           </Card>
 
           {/* Registration Info Card */}
-          <Card>
+          <Card className="lg:flex-1">
             <CardHeader>
               <CardTitle className="text-lg">Registration Details</CardTitle>
             </CardHeader>
@@ -143,8 +145,8 @@ export default function ProfilePage() {
         </div>
 
         {/* Right Column - Editable Form */}
-        <div className="lg:col-span-2">
-          <Card>
+        <div className="lg:col-span-2 lg:h-full flex flex-col">
+          <Card className="lg:flex-1 flex flex-col">
             <CardHeader>
               <CardTitle>Edit Profile Information</CardTitle>
               <CardDescription>Update your organisation details below</CardDescription>
@@ -253,7 +255,7 @@ export default function ProfilePage() {
                   <Button 
                     type="button" 
                     variant="outline"
-                    onClick={() => window.location.reload()}
+                    onClick={() => router.push('/dashboard')}
                     disabled={isLoading}
                   >
                     Cancel
