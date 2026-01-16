@@ -50,6 +50,14 @@ const organisationSchema = new mongoose.Schema({
         type: Date,
         default: null,
     },
+    contestantIds: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Contestant',
+    }],
+    coachIds: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Coach',
+    }],
 }, { timestamps: true });
 
 const Organisation = mongoose.model("Organisation", organisationSchema);
