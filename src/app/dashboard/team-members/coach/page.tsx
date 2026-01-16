@@ -141,7 +141,7 @@ export default function CoachLibraryPage() {
                   <TableCell>{coach.passportNo}</TableCell>
                   <TableCell>
                     <div className='flex justify-end gap-2'>
-                      <Link href={`/dashboard/team-members/coach/edit/${coach.id}`}>
+                      <Link href={`/dashboard/team-members/coach/${coach.id}`}>
                         <Button size='sm' className='bg-blue-500 hover:bg-blue-600'>
                           <Edit size={14} className='mr-1' />
                           Edit
