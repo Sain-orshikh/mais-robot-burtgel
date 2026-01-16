@@ -6,13 +6,15 @@ import { eventApi } from '@/lib/api/events'
 import { contestantApi } from '@/lib/api/contestants'
 import { coachApi } from '@/lib/api/coaches'
 import { teamApi } from '@/lib/api/teams'
+import { paymentApi } from '@/lib/api/payments'
 import { Event, Contestant, Coach, Team } from '@/types/models'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowLeft, Users, Trophy, Calendar, MapPin } from 'lucide-react'
+import { ArrowLeft, Users, Trophy, Calendar, MapPin, CreditCard, CheckCircle2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { PaymentModal } from '@/app/components/events/PaymentModal'
 import {
   Select,
   SelectContent,
@@ -47,6 +49,7 @@ export default function EventDetailPage() {
   const [contestants, setContestants] = useState<Contestant[]>([])
   const [coaches, setCoaches] = useState<Coach[]>([])
   const [myTeams, setMyTeams] = useState<Team[]>([])
+  const [payment, setPayment] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   
   // Team creation form state
@@ -55,6 +58,9 @@ export default function EventDetailPage() {
   const [selectedContestants, setSelectedContestants] = useState<string[]>([])
   const [selectedCoach, setSelectedCoach] = useState<string>('')
   const [creating, setCreating] = useState(false)
+  
+  // Payment state
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -62,17 +68,19 @@ export default function EventDetailPage() {
 
   const fetchData = async () => {
     try {
-      const [eventData, contestantsData, coachesData, teamsData] = await Promise.all([
+      const [eventData, contestantsData, coachesData, teamsData, paymentData] = await Promise.all([
         eventApi.getById(eventId),
         contestantApi.getAll(),
         coachApi.getAll(),
         teamApi.getByEvent(eventId),
+        paymentApi.getPaymentStatus(eventId).catch(() => null),
       ])
       
       setEvent(eventData)
       setContestants(contestantsData)
       setCoaches(coachesData)
       setMyTeams(teamsData)
+      setPayment(paymentData)
     } catch (error) {
       toast({
         title: 'Error',
@@ -173,7 +181,20 @@ export default function EventDetailPage() {
       })
     }
   }
+  const handlePaymentSubmit = async (receiptUrl: string) => {
+    const activeTeams = myTeams.filter(t => t.status === 'active')
+    const teamIds = activeTeams.map(t => t._id)
+    const amount = activeTeams.length * 50000 // 50,000₮ per team
 
+    await paymentApi.submitPayment({
+      eventId,
+      receiptUrl,
+      teamIds,
+      amount,
+    })
+
+    await fetchData() // Refresh to get payment status
+  }
   if (loading) {
     return (
       <div className='container mx-auto px-6 py-8'>
@@ -316,8 +337,60 @@ export default function EventDetailPage() {
           </div>
         </CardContent>
       </Card>
+      
+      {/* Payment Section */}
+      {myTeams.filter(t => t.status === 'active').length > 0 && (
+        <Card className='mb-8'>
+          <CardContent className='p-6'>
+            {payment ? (
+              <div className='flex items-center justify-between'>
+                <div className='flex items-center gap-3'>
+                  <CheckCircle2 className='text-green-500' size={24} />
+                  <div>
+                    <div className='font-semibold text-gray-800'>Payment Submitted</div>
+                    <div className='text-sm text-gray-600'>
+                      Status: <span className={`font-medium ${
+                        payment.status === 'approved' ? 'text-green-600' :
+                        payment.status === 'rejected' ? 'text-red-600' :
+                        'text-yellow-600'
+                      }`}>
+                        {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <a
+                  href={payment.receiptUrl}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  className='text-blue-500 hover:underline text-sm'
+                >
+                  View Receipt
+                </a>
+              </div>
+            ) : (
+              <div className='flex items-center justify-between'>
+                <div>
+                  <div className='font-semibold text-gray-800 mb-1'>Payment Required</div>
+                  <div className='text-sm text-gray-600'>
+                    Complete payment to finalize your registration ({myTeams.filter(t => t.status === 'active').length} teams)
+                  </div>
+                </div>
+                <Button
+                  onClick={() => setShowPaymentModal(true)}
+                  className='bg-green-600 hover:bg-green-700'
+                >
+                  <CreditCard className='mr-2 h-4 w-4' />
+                  Pay Now
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+      
       {/* Team Registration Form */}
-      {isRegistrationOpen && !showTeamForm && (
+      {isRegistrationOpen && !showTeamForm && !payment && (
         <div className='mb-8'>
           <Button
             onClick={() => setShowTeamForm(true)}
@@ -492,7 +565,7 @@ export default function EventDetailPage() {
                         }`}>
                           {team.status.charAt(0).toUpperCase() + team.status.slice(1)}
                         </span>
-                        {team.status === 'active' && (
+                        {team.status === 'active' && !payment && (
                           <Button
                             size='sm'
                             variant='destructive'
@@ -500,6 +573,9 @@ export default function EventDetailPage() {
                           >
                             Withdraw
                           </Button>
+                        )}
+                        {payment && (
+                          <span className='text-xs text-gray-500 italic'>Locked after payment</span>
                         )}
                       </div>
                     </div>
@@ -537,6 +613,18 @@ export default function EventDetailPage() {
               : 'Registration deadline has passed.'}
           </p>
         </div>
+      )}
+      
+      {/* Payment Modal */}
+      {event && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          eventId={eventId}
+          eventName={event.name}
+          totalTeams={myTeams.filter(t => t.status === 'active').length}
+          onPaymentSubmit={handlePaymentSubmit}
+        />
       )}
     </div>
   )

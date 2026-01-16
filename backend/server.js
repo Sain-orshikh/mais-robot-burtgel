@@ -13,6 +13,7 @@ import contestantRoutes from "./routes/contestant.route.js";
 import coachRoutes from "./routes/coach.route.js";
 import eventRoutes from "./routes/event.route.js";
 import teamRoutes from "./routes/team.route.js";
+import paymentRoutes from "./routes/payment.route.js";
 import connectMongoDB from "./db/connectMongoDB.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -61,6 +62,7 @@ app.use('/api/contestants', contestantRoutes);
 app.use('/api/coaches', coachRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/teams', teamRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
