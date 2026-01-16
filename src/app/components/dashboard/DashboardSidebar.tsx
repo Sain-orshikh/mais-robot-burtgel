@@ -11,9 +11,11 @@ import {
   MessageSquare, 
   History,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Building2
 } from 'lucide-react'
-import { mockOrganization } from '@/data/mockUserData'
+import { useAuth } from '@/hooks/useAuth'
+import { useToast } from '@/hooks/use-toast'
 
 const menuItems = [
   {
@@ -54,6 +56,8 @@ const menuItems = [
 
 export function DashboardSidebar() {
   const pathname = usePathname()
+  const { organisation } = useAuth()
+  const { toast } = useToast()
   const [expandedMenus, setExpandedMenus] = useState<string[]>(['team-members'])
 
   const toggleMenu = (id: string) => {
@@ -64,25 +68,43 @@ export function DashboardSidebar() {
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
 
+  const handleComingSoon = (feature: string) => {
+    toast({
+      title: 'Coming Soon',
+      description: `${feature} feature is currently under development.`,
+    })
+  }
+
   return (
-    <div className='w-64 bg-white shadow-lg flex flex-col'>
+    <div className='w-64 bg-white flex flex-col'>
       {/* Organization Header */}
-      <div className='p-6 bg-gradient-to-br from-blue-400 to-blue-500 relative overflow-hidden'>
+      <div className='p-6 bg-gradient-to-br from-blue-500 to-blue-600 relative overflow-hidden'>
         {/* Geometric background pattern */}
-        <div className='absolute top-0 left-0 w-full h-32 opacity-20'>
-          <svg viewBox='0 0 200 100' className='w-full h-full'>
-            <polygon points='0,100 100,0 200,100' fill='rgba(255,255,255,0.3)' />
-            <polygon points='0,100 150,30 200,100' fill='rgba(255,255,255,0.15)' />
-          </svg>
+        <div className='absolute top-0 right-0 w-32 h-32 opacity-10'>
+          <Building2 size={120} className='text-white' />
         </div>
         
-        {/* Account Number */}
-        <div className='relative text-center mb-3'>
-          <div className='text-gray-700 text-2xl font-bold'>
-            {mockOrganization.accountNumber}
+        {/* Organization Info */}
+        <div className='relative'>
+          <div className='flex items-center gap-2 mb-2'>
+            <div className='w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm'>
+              <Building2 size={20} className='text-white' />
+            </div>
+            <div className='flex-1'>
+              <div className='text-white text-xs font-medium opacity-90'>Organization ID</div>
+              <div className='text-white text-lg font-bold tracking-wide'>
+                {organisation?.organisationId || 'Loading...'}
+              </div>
+            </div>
           </div>
-          <div className='text-gray-600 text-sm'>
-            {mockOrganization.name}
+          <div className='bg-white/10 backdrop-blur-sm rounded-lg p-3 mt-3'>
+            <div className='text-white text-sm font-medium truncate'>
+              {organisation?.typeDetail || organisation?.type || 'Organization'}
+            </div>
+            <div className='text-white/80 text-xs mt-1 flex items-center gap-1'>
+              <span>📍</span>
+              <span className='truncate'>{organisation?.aimag || 'Mongolia'}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -150,17 +172,27 @@ export function DashboardSidebar() {
                   )}
                 </>
               ) : (
-                <Link
-                  href={item.href}
-                  className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-                    isActive(item.href)
-                      ? 'bg-gray-100 text-gray-900 font-medium'
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  <item.icon size={20} />
-                  <span>{item.label}</span>
-                </Link>
+                item.id === 'events' ? (
+                  <Link
+                    href={item.href}
+                    className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
+                      isActive(item.href)
+                        ? 'bg-gray-100 text-gray-900 font-medium'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <item.icon size={20} />
+                    <span>{item.label}</span>
+                  </Link>
+                ) : (
+                  <button
+                    onClick={() => handleComingSoon(item.label)}
+                    className='w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50'
+                  >
+                    <item.icon size={20} />
+                    <span>{item.label}</span>
+                  </button>
+                )
               )}
             </li>
           ))}

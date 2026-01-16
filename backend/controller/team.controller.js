@@ -191,7 +191,7 @@ export const getTeamById = async (req, res) => {
     }
 };
 
-// Withdraw a team from an event
+// Withdraw a team from an event (deletes the team)
 export const withdrawTeam = async (req, res) => {
     try {
         const { id } = req.params;
@@ -203,14 +203,10 @@ export const withdrawTeam = async (req, res) => {
             return res.status(404).json({ error: "Team not found" });
         }
 
-        if (team.status === 'withdrawn') {
-            return res.status(400).json({ error: "Team is already withdrawn" });
-        }
+        // Delete the team entirely so organization can register a new one
+        await Team.findByIdAndDelete(id);
 
-        team.status = 'withdrawn';
-        await team.save();
-
-        res.status(200).json({ message: "Team withdrawn successfully", team });
+        res.status(200).json({ message: "Team withdrawn successfully" });
     } catch (error) {
         console.log("Error in withdrawTeam controller", error.message);
         res.status(500).json({ error: "Internal server error" });

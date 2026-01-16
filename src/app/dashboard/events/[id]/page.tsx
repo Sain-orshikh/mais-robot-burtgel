@@ -455,20 +455,27 @@ export default function EventDetailPage() {
       )}
 
       {/* My Registered Teams */}
-      {myTeams.length > 0 && (
+      {myTeams.filter(t => t.status === 'active').length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className='flex items-center gap-2'>
               <Users className='h-5 w-5' />
-              My Registered Teams ({myTeams.length})
+              My Registered Teams ({myTeams.filter(t => t.status === 'active').length})
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className='space-y-4'>
-              {myTeams.map((team) => {
+              {myTeams.filter(t => t.status === 'active').map((team) => {
                 const category = CATEGORIES.find(c => c.code === team.categoryCode)
-                const teamContestants = contestants.filter(c => team.contestantIds.includes(c._id))
-                const teamCoach = coaches.find(c => c._id === team.coachId)
+                
+                // Backend returns populated contestant and coach objects, not just IDs
+                const teamContestants = Array.isArray(team.contestantIds) && typeof team.contestantIds[0] === 'object'
+                  ? team.contestantIds as any[] // Already populated
+                  : contestants.filter(c => team.contestantIds.includes(c._id)) // Fallback if IDs only
+                
+                const teamCoach = typeof team.coachId === 'object'
+                  ? team.coachId as any // Already populated
+                  : coaches.find(c => c._id === team.coachId) // Fallback if ID only
                 
                 return (
                   <div key={team._id} className='p-4 border rounded-lg bg-white'>
