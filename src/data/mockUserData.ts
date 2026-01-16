@@ -164,16 +164,6 @@ export const mockEvents: Event[] = [
     endDate: '2026-03-17',
     registrationDeadline: '2026-02-28',
   },
-  {
-    id: '2',
-    name: 'Spring Mini Sumo Tournament',
-    description: 'Specialized mini sumo robot competition',
-    rating: 4,
-    status: 'coming',
-    startDate: '2026-04-20',
-    endDate: '2026-04-21',
-    registrationDeadline: '2026-04-10',
-  },
 ]
 
 // Mock organization

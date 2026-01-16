@@ -1,9 +1,12 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { mockEvents } from '@/data/mockUserData'
 import { Star } from 'lucide-react'
 
 export default function EventsPage() {
+  const router = useRouter()
+
   return (
     <div className='container mx-auto px-6 py-8'>
       <h1 className='text-2xl font-bold text-gray-800 mb-6'>Events</h1>
@@ -12,39 +15,16 @@ export default function EventsPage() {
         {mockEvents.map((event) => (
           <div
             key={event.id}
+            onClick={() => router.push(`/dashboard/events/${event.id}`)}
             className='bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow cursor-pointer'
           >
             {/* Event Image/Icon */}
-            <div className='bg-gradient-to-br from-blue-400 to-blue-500 h-48 flex items-center justify-center'>
-              <div className='text-white'>
-                <svg
-                  className='w-32 h-32'
-                  viewBox='0 0 100 100'
-                  fill='none'
-                  xmlns='http://www.w3.org/2000/svg'
-                >
-                  {/* Gear Icon */}
-                  <circle cx='50' cy='50' r='15' fill='currentColor' />
-                  <circle cx='50' cy='50' r='25' stroke='currentColor' strokeWidth='4' fill='none' />
-                  {Array.from({ length: 8 }).map((_, i) => {
-                    const angle = (i * 360) / 8
-                    const rad = (angle * Math.PI) / 180
-                    const x = 50 + Math.cos(rad) * 30
-                    const y = 50 + Math.sin(rad) * 30
-                    return (
-                      <rect
-                        key={i}
-                        x={x - 3}
-                        y={y - 6}
-                        width='6'
-                        height='12'
-                        fill='currentColor'
-                        transform={`rotate(${angle}, ${x}, ${y})`}
-                      />
-                    )
-                  })}
-                </svg>
-              </div>
+            <div className='h-48 flex items-center justify-center overflow-hidden'>
+              <img 
+                src='/icons/12.jpg' 
+                alt={event.name}
+                className='w-full h-full object-cover'
+              />
             </div>
 
             {/* Event Info */}
