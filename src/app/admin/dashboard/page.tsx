@@ -7,7 +7,7 @@ import { RecentRegistrations } from '@/app/components/admin/RecentRegistrations'
 import { CategoryDistribution } from '@/app/components/admin/CategoryDistribution'
 import { mockRegistrations, getRegistrationStats, getCategoryStats } from '@/data/mockRegistrations'
 import { Button } from '@/components/ui/button'
-import { Users, BarChart3 } from 'lucide-react'
+import { Users, BarChart3, Calendar } from 'lucide-react'
 import Link from 'next/link'
 
 export default function AdminDashboard() {
@@ -38,6 +38,12 @@ export default function AdminDashboard() {
         {/* Quick Actions */}
         <div className='flex gap-4 mb-8'>
           <Button asChild className='gap-2'>
+            <Link href='/admin/events'>
+              <Calendar size={20} />
+              Тэмцээн удирдах
+            </Link>
+          </Button>
+          <Button asChild variant='outline' className='gap-2'>
             <Link href='/admin/registrations'>
               <Users size={20} />
               Бүртгэлүүд харах

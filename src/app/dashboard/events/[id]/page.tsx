@@ -1,50 +1,191 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { mockEvents, mockContestants, mockCoaches } from '@/data/mockUserData'
+import { eventApi } from '@/lib/api/events'
+import { contestantApi } from '@/lib/api/contestants'
+import { coachApi } from '@/lib/api/coaches'
+import { teamApi } from '@/lib/api/teams'
+import { Event, Contestant, Coach, Team } from '@/types/models'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Users, Trophy, Calendar, MapPin } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
-const eventTypes = [
-  { id: 'mini-sumo-rc', name: 'Mini Sumo RC', maxContestants: 2, teamIdCode: 'MNR' },
-  { id: 'mega-sumo-rc', name: 'Mega Sumo RC', maxContestants: 2, teamIdCode: 'MGR' },
-  { id: 'mini-sumo-auto', name: 'Mini Sumo Auto', maxContestants: 2, teamIdCode: 'MNA' },
-  { id: 'mega-sumo-auto', name: 'Mega Sumo Auto', maxContestants: 2, teamIdCode: 'MGA' },
-  { id: 'robot-rugby', name: 'Robot Rugby', maxContestants: 4, teamIdCode: 'RRC' },
-  { id: 'drone-rc', name: 'Drone RC', maxContestants: 2, teamIdCode: 'DRC' },
-  { id: 'drone-auto', name: 'Drone Auto', maxContestants: 2, teamIdCode: 'DRA' },
-  { id: 'line-follower-lego', name: 'Line Follower (Lego)', maxContestants: 2, teamIdCode: 'LFG' },
-  { id: 'line-follower-high-speed', name: 'Line Follower (High Speed)', maxContestants: 2, teamIdCode: 'LFH' },
-  { id: 'line-follower-low-speed', name: 'Line Follower (Low Speed)', maxContestants: 2, teamIdCode: 'LFL' },
-  { id: 'lego-sumo', name: 'Lego Sumo', maxContestants: 2, teamIdCode: 'LSR' },
-  { id: 'lego-unknown', name: 'Lego Unknown', maxContestants: 3, teamIdCode: 'LUR' },
+// Category definitions from backend
+const CATEGORIES = [
+  { code: 'MNR', name: 'Mini Sumo RC', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
+  { code: 'MGR', name: 'Mega Sumo RC', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
+  { code: 'MNA', name: 'Mini Sumo Auto', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
+  { code: 'MGA', name: 'Mega Sumo Auto', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
+  { code: 'RRC', name: 'Robot Rugby', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
+  { code: 'DRC', name: 'Drone RC', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
+  { code: 'DRA', name: 'Drone Auto', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
+  { code: 'LFG', name: 'Line Follower (Lego)', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
+  { code: 'LFH', name: 'Line Follower (High Speed)', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
+  { code: 'LFL', name: 'Line Follower (Low Speed)', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
+  { code: 'LSR', name: 'Lego Sumo', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
+  { code: 'LUR', name: 'Lego Unknown', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
 ]
-
-interface Team {
-  id: string
-  eventType: string
-  contestants: string[]
-  coach: string
-}
 
 export default function EventDetailPage() {
   const router = useRouter()
   const params = useParams()
+  const { toast } = useToast()
   const eventId = params.id as string
   
-  const event = mockEvents.find((e) => e.id === eventId)
+  const [event, setEvent] = useState<Event | null>(null)
+  const [contestants, setContestants] = useState<Contestant[]>([])
+  const [coaches, setCoaches] = useState<Coach[]>([])
+  const [myTeams, setMyTeams] = useState<Team[]>([])
+  const [loading, setLoading] = useState(true)
   
-  const [selectedEventType, setSelectedEventType] = useState<string>('')
-  const [showContestantSelection, setShowContestantSelection] = useState(false)
+  // Team creation form state
+  const [showTeamForm, setShowTeamForm] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [selectedContestants, setSelectedContestants] = useState<string[]>([])
-  const [showCoachSelection, setShowCoachSelection] = useState(false)
   const [selectedCoach, setSelectedCoach] = useState<string>('')
-  const [teams, setTeams] = useState<Team[]>([])
-  const [selectedTeam, setSelectedTeam] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
+
+  useEffect(() => {
+    fetchData()
+  }, [eventId])
+
+  const fetchData = async () => {
+    try {
+      const [eventData, contestantsData, coachesData, teamsData] = await Promise.all([
+        eventApi.getById(eventId),
+        contestantApi.getAll(),
+        coachApi.getAll(),
+        teamApi.getByEvent(eventId),
+      ])
+      
+      setEvent(eventData)
+      setContestants(contestantsData)
+      setCoaches(coachesData)
+      setMyTeams(teamsData)
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to load event details',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleContestantToggle = (contestantId: string) => {
+    setSelectedContestants((prev) => {
+      if (prev.includes(contestantId)) {
+        return prev.filter((id) => id !== contestantId)
+      } else {
+        const currentCategory = CATEGORIES.find(c => c.code === selectedCategory)
+        if (prev.length < (currentCategory?.maxContestants || 2)) {
+          return [...prev, contestantId]
+        } else {
+          toast({
+            title: 'Maximum reached',
+            description: `This category allows maximum ${currentCategory?.maxContestants} contestants per team`,
+            variant: 'destructive',
+          })
+        }
+        return prev
+      }
+    })
+  }
+
+  const handleCreateTeam = async () => {
+    if (!selectedCategory || selectedContestants.length === 0 || !selectedCoach) {
+      toast({
+        title: 'Incomplete Selection',
+        description: 'Please select category, contestants, and coach',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const currentCategory = CATEGORIES.find(c => c.code === selectedCategory)
+    if (selectedContestants.length < (currentCategory?.minContestants || 2)) {
+      toast({
+        title: 'Not Enough Contestants',
+        description: `This category requires at least ${currentCategory?.minContestants} contestants`,
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setCreating(true)
+    try {
+      await teamApi.create({
+        eventId,
+        categoryCode: selectedCategory,
+        contestantIds: selectedContestants,
+        coachId: selectedCoach,
+      })
+      
+      toast({
+        title: 'Success',
+        description: 'Team created successfully',
+      })
+      
+      // Reset form and refresh teams
+      setShowTeamForm(false)
+      setSelectedCategory('')
+      setSelectedContestants([])
+      setSelectedCoach('')
+      fetchData()
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to create team',
+        variant: 'destructive',
+      })
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  const handleWithdrawTeam = async (teamId: string) => {
+    if (!confirm('Are you sure you want to withdraw this team?')) return
+
+    try {
+      await teamApi.withdraw(teamId)
+      toast({
+        title: 'Success',
+        description: 'Team withdrawn successfully',
+      })
+      fetchData()
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to withdraw team',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className='container mx-auto px-6 py-8'>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading event details...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (!event) {
     return (
@@ -54,78 +195,19 @@ export default function EventDetailPage() {
     )
   }
 
-  const currentEventType = eventTypes.find((et) => et.id === selectedEventType)
-  const maxContestants = currentEventType?.maxContestants || 2
-
-  const handleEventTypeChange = (eventTypeId: string) => {
-    setSelectedEventType(eventTypeId)
-    setShowContestantSelection(false)
-    setShowCoachSelection(false)
-    setSelectedContestants([])
-    setSelectedCoach('')
-  }
-
-  const handleContestantToggle = (contestantId: string) => {
-    setSelectedContestants((prev) => {
-      if (prev.includes(contestantId)) {
-        return prev.filter((id) => id !== contestantId)
-      } else {
-        if (prev.length < maxContestants) {
-          return [...prev, contestantId]
-        }
-        return prev
-      }
-    })
-  }
-
-  const handleChooseContestant = () => {
-    if (!selectedEventType) {
-      alert('Please select an event type first')
-      return
-    }
-    setShowContestantSelection(true)
-  }
-
-  const handleChooseCoach = () => {
-    if (selectedContestants.length === 0) {
-      alert('Please select at least one contestant first')
-      return
-    }
-    setShowCoachSelection(true)
-  }
-
-  const handleCreateTeam = () => {
-    if (!selectedEventType || selectedContestants.length === 0 || !selectedCoach) {
-      alert('Please complete all selections before creating a team')
-      return
-    }
-
-    const currentEventType = eventTypes.find((et) => et.id === selectedEventType)
-    const teamIdCode = currentEventType?.teamIdCode || 'XXX'
-    const eventTeams = teams.filter((t) => t.eventType === selectedEventType)
-    const teamNumber = eventTeams.length + 1
-    const teamId = `T${teamIdCode}${teamNumber.toString().padStart(3, '0')}`
-
-    const newTeam: Team = {
-      id: teamId,
-      eventType: selectedEventType,
-      contestants: selectedContestants,
-      coach: selectedCoach,
-    }
-
-    setTeams([...teams, newTeam])
+  // Check if registration is open - allow until 23:59:59 on the deadline date
+  const isRegistrationOpen = (() => {
+    if (event.status !== 'open') return false
     
-    // Reset selections
-    setSelectedEventType('')
-    setShowContestantSelection(false)
-    setSelectedContestants([])
-    setShowCoachSelection(false)
-    setSelectedCoach('')
-  }
-
-  const getEventTypeName = (typeId: string) => {
-    return eventTypes.find((et) => et.id === typeId)?.name || typeId
-  }
+    const now = new Date()
+    const deadline = new Date(event.registrationDeadline)
+    
+    // Compare dates only (ignore time) - check if today's date is <= deadline date
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const deadlineDate = new Date(deadline.getFullYear(), deadline.getMonth(), deadline.getDate())
+    
+    return today <= deadlineDate
+  })()
 
   return (
     <div className='container mx-auto px-6 py-8'>
@@ -138,200 +220,316 @@ export default function EventDetailPage() {
         Back to Events
       </Button>
 
-      <div className='mb-8'>
-        <h1 className='text-3xl font-bold text-gray-800 mb-2'>{event.name}</h1>
-        <p className='text-gray-600'>{event.description}</p>
-        <div className='mt-4 flex gap-4 text-sm text-gray-600'>
+      {/* Event Header */}
+      <div className='mb-8 bg-white p-6 rounded-lg shadow'>
+        <div className='flex items-start justify-between'>
           <div>
-            <span className='font-medium'>Event Date:</span>{' '}
-            {new Date(event.startDate).toLocaleDateString()} -{' '}
-            {new Date(event.endDate).toLocaleDateString()}
+            <h1 className='text-3xl font-bold text-gray-800 mb-2'>{event.name}</h1>
+            <p className='text-gray-600 mb-4'>{event.description}</p>
           </div>
-          <div>
-            <span className='font-medium'>Registration Deadline:</span>{' '}
-            {new Date(event.registrationDeadline).toLocaleDateString()}
+          <span className={`px-4 py-2 rounded-full text-sm font-medium ${
+            event.status === 'open' 
+              ? 'bg-green-100 text-green-700' 
+              : event.status === 'closed'
+              ? 'bg-red-100 text-red-700'
+              : 'bg-gray-100 text-gray-700'
+          }`}>
+            {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+          </span>
+        </div>
+        
+        <div className='mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm'>
+          <div className='flex items-center gap-2 text-gray-600'>
+            <Calendar className='h-4 w-4' />
+            <div>
+              <div className='font-medium'>Event Date:</div>
+              <div>{new Date(event.startDate).toLocaleDateString('en-US', {
+                month: 'short', day: 'numeric', year: 'numeric'
+              })} - {new Date(event.endDate).toLocaleDateString('en-US', {
+                month: 'short', day: 'numeric', year: 'numeric'
+              })}</div>
+            </div>
+          </div>
+          
+          <div className='flex items-center gap-2 text-gray-600'>
+            <Calendar className='h-4 w-4' />
+            <div>
+              <div className='font-medium'>Registration Deadline:</div>
+              <div>{new Date(event.registrationDeadline).toLocaleDateString('en-US', {
+                month: 'short', day: 'numeric', year: 'numeric'
+              })}</div>
+            </div>
+          </div>
+          
+          <div className='flex items-center gap-2 text-gray-600'>
+            <MapPin className='h-4 w-4' />
+            <div>
+              <div className='font-medium'>Location:</div>
+              <div>{event.location}</div>
+            </div>
           </div>
         </div>
       </div>
 
-      <Card className='mb-6'>
+      {/* Categories Grid */}
+      <Card className='mb-8'>
         <CardHeader>
-          <CardTitle>Step 1: Select Event Type</CardTitle>
+          <div className='flex items-center justify-between'>
+            <CardTitle className='flex items-center gap-2'>
+              <Trophy className='h-5 w-5' />
+              Competition Categories
+            </CardTitle>
+            <span className='text-sm text-gray-500'>{event.categories.length} Categories Available</span>
+          </div>
         </CardHeader>
         <CardContent>
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-            {eventTypes.map((eventType) => (
-              <div key={eventType.id} className='flex items-start space-x-3'>
-                <Checkbox
-                  id={eventType.id}
-                  checked={selectedEventType === eventType.id}
-                  onCheckedChange={() => handleEventTypeChange(eventType.id)}
-                />
-                <Label
-                  htmlFor={eventType.id}
-                  className='cursor-pointer font-normal'
-                >
-                  {eventType.name}
-                  <span className='text-xs text-gray-500 ml-2'>
-                    (max {eventType.maxContestants} contestants)
-                  </span>
-                </Label>
-              </div>
-            ))}
+            {CATEGORIES.map((category) => {
+              const eventCategory = event.categories.find(c => c.categoryCode === category.code)
+              const myTeamsInCategory = myTeams.filter(t => t.categoryCode === category.code)
+              const canRegisterMore = myTeamsInCategory.length < category.maxTeamsPerOrg
+              
+              return (
+                <div key={category.code} className='p-4 border rounded-lg bg-gray-50'>
+                  <div className='font-semibold text-lg mb-2'>{category.name}</div>
+                  <div className='text-sm text-gray-600 space-y-1'>
+                    <div>Code: <span className='font-mono font-medium'>{category.code}</span></div>
+                    <div>Team Size: {category.minContestants}-{category.maxContestants} contestants</div>
+                    <div>Max Teams: {category.maxTeamsPerOrg} per organization</div>
+                    <div className='pt-2'>
+                      <span className='font-medium'>Your Teams: </span>
+                      <span className={myTeamsInCategory.length > 0 ? 'text-green-600 font-medium' : 'text-gray-500'}>
+                        {myTeamsInCategory.length}/{category.maxTeamsPerOrg}
+                      </span>
+                    </div>
+                    {myTeamsInCategory.length > 0 && (
+                      <div className='mt-2 text-xs'>
+                        {myTeamsInCategory.map(team => (
+                          <div key={team._id} className='font-mono'>{team.teamId}</div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </CardContent>
       </Card>
-
-      {selectedEventType && (
-        <Card className='mb-6'>
-          <CardHeader>
-            <CardTitle>Step 2: Select Contestants</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={handleChooseContestant} className='mb-4'>
-              Choose Contestant
-            </Button>
-            {showContestantSelection && (
-              <div className='mt-4 p-4 border rounded-lg bg-gray-50'>
-                <p className='mb-3 text-sm text-gray-600'>
-                  Select up to {maxContestants} contestants for{' '}
-                  {currentEventType?.name}
-                </p>
-                <div className='space-y-3'>
-                  {mockContestants.map((contestant) => (
-                    <div key={contestant.id} className='flex items-start space-x-3'>
-                      <Checkbox
-                        id={`contestant-${contestant.id}`}
-                        checked={selectedContestants.includes(contestant.id)}
-                        onCheckedChange={() => handleContestantToggle(contestant.id)}
-                        disabled={
-                          !selectedContestants.includes(contestant.id) &&
-                          selectedContestants.length >= maxContestants
-                        }
-                      />
-                      <Label
-                        htmlFor={`contestant-${contestant.id}`}
-                        className='cursor-pointer font-normal'
-                      >
-                        {contestant.listName} ({contestant.youngId})
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-                <p className='mt-3 text-sm text-gray-500'>
-                  Selected: {selectedContestants.length}/{maxContestants}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {selectedContestants.length > 0 && (
-        <Card className='mb-6'>
-          <CardHeader>
-            <CardTitle>Step 3: Select Coach</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={handleChooseCoach} className='mb-4'>
-              Choose Coach
-            </Button>
-            {showCoachSelection && (
-              <div className='mt-4 p-4 border rounded-lg bg-gray-50'>
-                <p className='mb-3 text-sm text-gray-600'>
-                  Select one coach for the team
-                </p>
-                <div className='space-y-3'>
-                  {mockCoaches.map((coach) => (
-                    <div key={coach.id} className='flex items-start space-x-3'>
-                      <Checkbox
-                        id={`coach-${coach.id}`}
-                        checked={selectedCoach === coach.id}
-                        onCheckedChange={() => setSelectedCoach(coach.id)}
-                      />
-                      <Label
-                        htmlFor={`coach-${coach.id}`}
-                        className='cursor-pointer font-normal'
-                      >
-                        {coach.listName} ({coach.youngId})
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {selectedCoach && (
-        <div className='mb-6'>
+      {/* Team Registration Form */}
+      {isRegistrationOpen && !showTeamForm && (
+        <div className='mb-8'>
           <Button
-            onClick={handleCreateTeam}
-            className='bg-green-600 hover:bg-green-700'
+            onClick={() => setShowTeamForm(true)}
+            className='bg-blue-600 hover:bg-blue-700'
           >
-            Create Team
+            <Users className='mr-2 h-4 w-4' />
+            Register New Team
           </Button>
         </div>
       )}
 
-      {teams.length > 0 && (
-        <Card>
+      {showTeamForm && (
+        <Card className='mb-8'>
           <CardHeader>
-            <CardTitle>Created Teams</CardTitle>
+            <CardTitle>Register Team</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-              {teams.map((team) => (
-                <div
-                  key={team.id}
-                  onClick={() =>
-                    setSelectedTeam(selectedTeam === team.id ? null : team.id)
-                  }
-                  className='p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors'
-                >
-                  <div className='font-semibold text-lg mb-2'>
-                    Team #{team.id}
-                  </div>
-                  
-                  {selectedTeam === team.id && (
-                    <div className='mt-3 space-y-2 text-sm'>
-                      <div>
-                        <span className='font-medium'>Event Type:</span>
-                        <div className='text-gray-700 mt-1'>
-                          {getEventTypeName(team.eventType)}
-                        </div>
+          <CardContent className='space-y-6'>
+            {/* Step 1: Category Selection */}
+            <div>
+              <Label className='text-base font-semibold mb-3 block'>
+                1. Select Category
+              </Label>
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((category) => {
+                    const myTeamsInCategory = myTeams.filter(t => t.categoryCode === category.code)
+                    const canRegister = myTeamsInCategory.length < category.maxTeamsPerOrg
+                    
+                    return (
+                      <SelectItem 
+                        key={category.code} 
+                        value={category.code}
+                        disabled={!canRegister}
+                      >
+                        {category.name} {!canRegister && '(Limit Reached)'}
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+              {selectedCategory && (
+                <p className='text-sm text-gray-600 mt-2'>
+                  Team size: {CATEGORIES.find(c => c.code === selectedCategory)?.minContestants}-
+                  {CATEGORIES.find(c => c.code === selectedCategory)?.maxContestants} contestants
+                </p>
+              )}
+            </div>
+
+            {/* Step 2: Contestant Selection */}
+            {selectedCategory && (
+              <div>
+                <Label className='text-base font-semibold mb-3 block'>
+                  2. Select Contestants (required: {CATEGORIES.find(c => c.code === selectedCategory)?.minContestants})
+                </Label>
+                <div className='space-y-2 max-h-60 overflow-y-auto border rounded-lg p-4'>
+                  {contestants.length === 0 ? (
+                    <p className='text-sm text-gray-500'>
+                      No contestants available. Please add contestants first.
+                    </p>
+                  ) : (
+                    contestants.map((contestant) => (
+                      <div key={contestant._id} className='flex items-center space-x-2'>
+                        <Checkbox
+                          id={`contestant-${contestant._id}`}
+                          checked={selectedContestants.includes(contestant._id)}
+                          onCheckedChange={() => handleContestantToggle(contestant._id)}
+                        />
+                        <Label
+                          htmlFor={`contestant-${contestant._id}`}
+                          className='cursor-pointer font-normal flex-1'
+                        >
+                          {contestant.ovog} {contestant.ner} ({contestant.contestantId})
+                        </Label>
                       </div>
-                      
-                      <div>
-                        <span className='font-medium'>Contestants:</span>
-                        <div className='text-gray-700 mt-1'>
-                          {team.contestants.map((contestantId) => {
-                            const contestant = mockContestants.find(
-                              (c) => c.id === contestantId
-                            )
-                            return (
-                              <div key={contestantId}>
-                                • {contestant?.listName}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <span className='font-medium'>Coach:</span>
-                        <div className='text-gray-700 mt-1'>
-                          {mockCoaches.find((c) => c.id === team.coach)?.listName}
-                        </div>
-                      </div>
-                    </div>
+                    ))
                   )}
                 </div>
-              ))}
+                <p className='text-sm text-gray-500 mt-2'>
+                  Selected: {selectedContestants.length}/{CATEGORIES.find(c => c.code === selectedCategory)?.maxContestants}
+                </p>
+              </div>
+            )}
+
+            {/* Step 3: Coach Selection */}
+            {selectedContestants.length > 0 && (
+              <div>
+                <Label className='text-base font-semibold mb-3 block'>
+                  3. Select Coach (required)
+                </Label>
+                <Select value={selectedCoach} onValueChange={setSelectedCoach}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a coach" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {coaches.length === 0 ? (
+                      <SelectItem value="none" disabled>No coaches available</SelectItem>
+                    ) : (
+                      coaches.map((coach) => (
+                        <SelectItem key={coach._id} value={coach._id}>
+                          {coach.ovog} {coach.ner} ({coach.coachId})
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className='flex gap-3 pt-4'>
+              <Button
+                onClick={handleCreateTeam}
+                disabled={!selectedCategory || selectedContestants.length === 0 || !selectedCoach || creating}
+                className='bg-green-600 hover:bg-green-700'
+              >
+                {creating ? 'Creating...' : 'Create Team'}
+              </Button>
+              <Button
+                variant='outline'
+                onClick={() => {
+                  setShowTeamForm(false)
+                  setSelectedCategory('')
+                  setSelectedContestants([])
+                  setSelectedCoach('')
+                }}
+              >
+                Cancel
+              </Button>
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* My Registered Teams */}
+      {myTeams.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className='flex items-center gap-2'>
+              <Users className='h-5 w-5' />
+              My Registered Teams ({myTeams.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className='space-y-4'>
+              {myTeams.map((team) => {
+                const category = CATEGORIES.find(c => c.code === team.categoryCode)
+                const teamContestants = contestants.filter(c => team.contestantIds.includes(c._id))
+                const teamCoach = coaches.find(c => c._id === team.coachId)
+                
+                return (
+                  <div key={team._id} className='p-4 border rounded-lg bg-white'>
+                    <div className='flex items-start justify-between mb-3'>
+                      <div>
+                        <div className='font-mono font-bold text-lg'>{team.teamId}</div>
+                        <div className='text-sm text-gray-600'>{category?.name}</div>
+                      </div>
+                      <div className='flex items-center gap-2'>
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                          team.status === 'active' 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-gray-100 text-gray-700'
+                        }`}>
+                          {team.status.charAt(0).toUpperCase() + team.status.slice(1)}
+                        </span>
+                        {team.status === 'active' && (
+                          <Button
+                            size='sm'
+                            variant='destructive'
+                            onClick={() => handleWithdrawTeam(team._id)}
+                          >
+                            Withdraw
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className='grid grid-cols-1 md:grid-cols-2 gap-4 text-sm'>
+                      <div>
+                        <div className='font-medium text-gray-700 mb-1'>Contestants:</div>
+                        {teamContestants.map((contestant) => (
+                          <div key={contestant._id} className='text-gray-600'>
+                            • {contestant.ovog} {contestant.ner} ({contestant.contestantId})
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <div>
+                        <div className='font-medium text-gray-700 mb-1'>Coach:</div>
+                        <div className='text-gray-600'>
+                          {teamCoach ? `${teamCoach.ovog} ${teamCoach.ner} (${teamCoach.coachId})` : 'N/A'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {!isRegistrationOpen && (
+        <div className='mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg'>
+          <p className='text-yellow-800 text-center'>
+            {event.status === 'closed' 
+              ? 'Registration for this event has closed.' 
+              : 'Registration deadline has passed.'}
+          </p>
+        </div>
       )}
     </div>
   )

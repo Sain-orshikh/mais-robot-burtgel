@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { MemberForm } from '@/app/components/shared/MemberForm'
-import { mockCoaches } from '@/data/mockUserData'
+import { coachApi } from '@/lib/api/coaches'
+import { Coach } from '@/types/models'
 import { useToast } from '@/hooks/use-toast'
 
 export default function CoachFormPage() {
@@ -12,23 +13,71 @@ export default function CoachFormPage() {
   const { toast } = useToast()
   const id = params.id as string
   const isAddMode = id === 'add'
-  const coach = isAddMode ? null : mockCoaches.find((c) => c.id === id)
-  const handleSave = (formData: any) => {
-    if (isAddMode) {
-      console.log('Creating new coach:', formData)
-    } else {
-      console.log('Updating coach:', { id, ...formData })
+  
+  const [coach, setCoach] = useState<Coach | null>(null)
+  const [loading, setLoading] = useState(!isAddMode)
+
+  useEffect(() => {
+    if (!isAddMode) {
+      fetchCoach()
     }
-    toast({
-      title: 'Success',
-      description: isAddMode ? 'Coach successfully created!' : 'Coach successfully saved!',
-    })
-    setTimeout(() => {
-      router.push('/dashboard/team-members/coach')
-    }, 1500)
+  }, [id])
+
+  const fetchCoach = async () => {
+    try {
+      const data = await coachApi.getById(id)
+      setCoach(data)
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to load coach',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoading(false)
+    }
   }
+
+  const handleSave = async (formData: any) => {
+    try {
+      if (isAddMode) {
+        await coachApi.create(formData)
+        toast({
+          title: 'Success',
+          description: 'Coach successfully created!',
+        })
+      } else {
+        await coachApi.update(id, formData)
+        toast({
+          title: 'Success',
+          description: 'Coach successfully updated!',
+        })
+      }
+      setTimeout(() => {
+        router.push('/dashboard/team-members/coach')
+      }, 1500)
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to save coach',
+        variant: 'destructive',
+      })
+    }
+  }
+
   const handleCancel = () => {
     router.push('/dashboard/team-members/coach')
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -38,11 +87,11 @@ export default function CoachFormPage() {
       initialData={
         coach
           ? {
-              firstName: coach.firstName,
-              lastName: coach.lastName,
-              registerNumber: coach.youngId,
+              ner: coach.ner,
+              ovog: coach.ovog,
+              register: coach.register,
               email: coach.email,
-              birthdate: coach.birthdate,
+              tursunUdur: coach.tursunUdur,
               gender: coach.gender,
               phoneNumber: coach.phoneNumber,
             }
