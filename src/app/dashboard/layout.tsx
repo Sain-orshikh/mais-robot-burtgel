@@ -41,20 +41,39 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className='flex h-screen bg-gray-50'>
-      {/* Sidebar */}
+    <div className='relative h-screen bg-gray-50 md:flex'>
+      {/* Mobile Sidebar Overlay */}
       <div
-        className={`transition-all duration-300 ${
-          isSidebarOpen ? 'w-64' : 'w-0'
-        } overflow-hidden`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 h-screen bg-white transform transition-transform duration-300 md:hidden ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
       >
         <DashboardSidebar />
       </div>
+
+      {/* Desktop Sidebar */}
+      <div
+        className={`hidden md:block transition-all duration-300 overflow-hidden ${
+          isSidebarOpen ? 'w-64' : 'w-0'
+        }`}
+      >
+        <div className='h-full bg-white'>
+          <DashboardSidebar />
+        </div>
+      </div>
+
+      {/* Mobile Backdrop */}
+      {isSidebarOpen && (
+        <div
+          className='fixed inset-0 z-40 bg-black/40 md:hidden'
+          onClick={toggleSidebar}
+        />
+      )}
       
       {/* Main Content */}
-      <div className='flex-1 flex flex-col overflow-hidden'>
+      <div className='flex flex-col overflow-hidden md:flex-1'>
         {/* Header */}
-        <DashboardHeader onToggleSidebar={toggleSidebar} />
+        <DashboardHeader onToggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} />
         
         {/* Page Content */}
         <main className='flex-1 overflow-y-auto bg-gray-100'>

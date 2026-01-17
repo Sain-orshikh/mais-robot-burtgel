@@ -42,7 +42,7 @@ export function PaymentModal({
   
   // Format payment number with leading zeros (e.g., 001, 002, 003)
   const paymentNumber = String(paymentCount).padStart(3, '0')
-  const paymentDescription = `Organisation ID ${organisationId}-${paymentNumber}`
+  const paymentDescription = `${organisationId}-${paymentNumber}`
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]

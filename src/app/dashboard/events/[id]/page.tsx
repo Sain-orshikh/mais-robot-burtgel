@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { eventApi } from '@/lib/api/events'
 import { contestantApi } from '@/lib/api/contestants'
@@ -95,6 +95,20 @@ export default function EventDetailPage() {
       maxContestants: backendConfig?.maxContestants || cat.maxContestantsPerTeam,
     }
   }) || []
+
+  const lockedContestants = useMemo(() => {
+    if (!selectedCategory) return new Set<string>()
+
+    return new Set(
+      myTeams
+        .filter(t => t.status === 'active' && t.categoryCode === selectedCategory)
+        .flatMap(t => Array.isArray(t.contestantIds)
+          ? t.contestantIds.map((c: any) => typeof c === 'object' ? c._id : c)
+          : [])
+        .filter(Boolean)
+        .map((id: any) => id.toString())
+    )
+  }, [myTeams, selectedCategory])
 
   useEffect(() => {
     fetchData()
@@ -259,9 +273,6 @@ export default function EventDetailPage() {
   // Check if registration is open
   const isRegistrationOpen = (() => {
     if (!event) return false
-    
-    // Bypass for testing
-    if (process.env.NEXT_PUBLIC_BYPASS_REGISTRATION_CHECK === 'true') return true
     
     const now = new Date()
     const regStart = new Date(event.registrationStart)
@@ -452,12 +463,16 @@ export default function EventDetailPage() {
                           id={`contestant-${contestant._id}`}
                           checked={selectedContestants.includes(contestant._id)}
                           onCheckedChange={() => handleContestantToggle(contestant._id)}
+                          disabled={lockedContestants.has(contestant._id)}
                         />
                         <Label
                           htmlFor={`contestant-${contestant._id}`}
-                          className='cursor-pointer font-normal flex-1'
+                          className={`cursor-pointer font-normal flex-1 ${lockedContestants.has(contestant._id) ? 'text-gray-400' : ''}`}
                         >
                           {contestant.ovog} {contestant.ner} ({contestant.contestantId})
+                          {lockedContestants.has(contestant._id) && (
+                            <span className='ml-2 text-xs text-gray-400'>Already in this category</span>
+                          )}
                         </Label>
                       </div>
                     ))

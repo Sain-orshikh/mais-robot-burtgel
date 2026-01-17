@@ -25,6 +25,18 @@ export const submitPayment = async (req, res) => {
             return res.status(400).json({ error: "Some teams are already included in a payment" });
         }
 
+        // Guard: ensure all teams are still unpaid at the time of submission
+        const unpaidCount = await Team.countDocuments({
+            _id: { $in: teamIds },
+            organisationId,
+            eventId,
+            paymentId: { $in: [null, undefined] },
+        });
+
+        if (unpaidCount !== teamIds.length) {
+            return res.status(409).json({ error: "Some teams were paid in another request" });
+        }
+
         const payment = await Payment.create({
             organisationId,
             eventId,
@@ -34,11 +46,17 @@ export const submitPayment = async (req, res) => {
             status: "pending",
         });
 
-        // Update teams to reference this payment
-        await Team.updateMany(
-            { _id: { $in: teamIds } },
+        // Update teams to reference this payment (only if still unpaid)
+        const teamUpdateResult = await Team.updateMany(
+            { _id: { $in: teamIds }, paymentId: { $in: [null, undefined] } },
             { $set: { paymentId: payment._id } }
         );
+
+        if (teamUpdateResult.modifiedCount !== teamIds.length) {
+            // Roll back payment if teams were linked by another request
+            await Payment.deleteOne({ _id: payment._id });
+            return res.status(409).json({ error: "Payment already submitted for some teams" });
+        }
 
         // Create a single grouped registration for this payment
         const event = await Event.findById(eventId);
@@ -50,20 +68,31 @@ export const submitPayment = async (req, res) => {
                 )
             );
 
-            await Event.updateOne(
-                { _id: eventId },
-                {
-                    $push: {
-                        registrations: {
-                            organisationId,
-                            teamIds,
-                            categories,
-                            paymentId: payment._id,
-                            status: "pending",
+            // Avoid duplicate grouped registrations for the same payment or teams
+            const existingGrouped = await Event.findOne({
+                _id: eventId,
+                $or: [
+                    { "registrations.paymentId": payment._id },
+                    { "registrations.teamIds": { $in: teamIds } },
+                ],
+            }).select("_id");
+
+            if (!existingGrouped) {
+                await Event.updateOne(
+                    { _id: eventId },
+                    {
+                        $push: {
+                            registrations: {
+                                organisationId,
+                                teamIds,
+                                categories,
+                                paymentId: payment._id,
+                                status: "pending",
+                            },
                         },
-                    },
-                }
-            );
+                    }
+                );
+            }
         }
 
         res.status(201).json({ message: "Payment submitted successfully", payment });

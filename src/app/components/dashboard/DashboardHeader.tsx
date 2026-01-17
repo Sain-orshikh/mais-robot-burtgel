@@ -1,6 +1,6 @@
 'use client'
 
-import { X, User } from 'lucide-react'
+import { Menu, X, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
@@ -14,9 +14,10 @@ import { useRouter } from 'next/navigation'
 
 interface DashboardHeaderProps {
   onToggleSidebar: () => void
+  isSidebarOpen: boolean
 }
 
-export function DashboardHeader({ onToggleSidebar }: DashboardHeaderProps) {
+export function DashboardHeader({ onToggleSidebar, isSidebarOpen }: DashboardHeaderProps) {
   const { organisation, logout } = useAuth()
   const router = useRouter()
 
@@ -29,7 +30,7 @@ export function DashboardHeader({ onToggleSidebar }: DashboardHeaderProps) {
   }
 
   return (
-    <header className='bg-gradient-to-r from-blue-400 to-blue-500 text-white shadow-md'>
+    <header className='bg-linear-to-r from-blue-400 to-blue-500 text-white shadow-md'>
       <div className='flex items-center justify-between px-6 py-3'>
         {/* Left Section - Close Sidebar Button */}
         <div className='flex items-center space-x-4'>
@@ -40,7 +41,7 @@ export function DashboardHeader({ onToggleSidebar }: DashboardHeaderProps) {
             onClick={onToggleSidebar}
             title='Toggle Sidebar'
           >
-            <X size={24} />
+            {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
           </Button>
         </div>
 
