@@ -71,11 +71,21 @@ const eventSchema = new mongoose.Schema(
                 coachId: {
                     type: mongoose.Schema.Types.ObjectId,
                     ref: 'Coach',
-                    required: true,
                 },
                 teamId: {
                     type: mongoose.Schema.Types.ObjectId,
                     ref: 'Team',
+                },
+                teamIds: [{
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'Team',
+                }],
+                categories: [{
+                    type: String,
+                }],
+                paymentId: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'Payment',
                 },
                 registeredAt: {
                     type: Date,

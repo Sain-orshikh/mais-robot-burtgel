@@ -52,7 +52,8 @@ export const getEventById = async (req, res) => {
         const event = await Event.findById(id)
             .populate('registrations.organisationId', 'organisationId typeDetail type aimag _id ner ovog phoneNumber email')
             .populate('registrations.contestantIds', 'ner ovog')
-            .populate('registrations.coachId', 'ner ovog');
+            .populate('registrations.coachId', 'ner ovog')
+            .populate('registrations.teamIds', 'teamId categoryCode categoryName');
 
         if (!event) {
             return res.status(404).json({ error: "Event not found" });
@@ -268,6 +269,13 @@ export const approveRegistration = async (req, res) => {
 
         const updatedRegistration = event.registrations.id(registrationId);
 
+        if (updatedRegistration?.paymentId) {
+            await Payment.updateOne(
+                { _id: updatedRegistration.paymentId },
+                { $set: { status: "approved" } }
+            );
+        }
+
         res.status(200).json({ message: "Registration approved successfully", registration: updatedRegistration });
     } catch (error) {
         console.log("Error in approveRegistration controller", error.message);
@@ -307,18 +315,21 @@ export const rejectRegistration = async (req, res) => {
         const updatedRegistration = event.registrations.id(registrationId);
 
         // Reset payment status for teams related to this registration (org + event + category)
-        const regCategory = updatedRegistration?.category;
         const organisationId = updatedRegistration?.organisationId;
+        const regTeamIds = Array.isArray(updatedRegistration?.teamIds) ? updatedRegistration.teamIds : [];
+        const regCategory = updatedRegistration?.category;
 
-        if (regCategory && organisationId) {
-            const teamsToReset = await Team.find({
-                eventId,
-                organisationId,
-                $or: [
-                    { categoryCode: regCategory },
-                    { categoryName: regCategory },
-                ],
-            }).select("_id paymentId");
+        if (organisationId) {
+            const teamsToReset = regTeamIds.length > 0
+                ? await Team.find({ _id: { $in: regTeamIds } }).select("_id paymentId")
+                : await Team.find({
+                    eventId,
+                    organisationId,
+                    $or: [
+                        { categoryCode: regCategory },
+                        { categoryName: regCategory },
+                    ],
+                }).select("_id paymentId");
 
             const teamIdsToReset = teamsToReset.map((t) => t._id);
 
@@ -330,11 +341,15 @@ export const rejectRegistration = async (req, res) => {
                 );
 
                 // Remove teamIds from payments; delete empty payments
-                const payments = await Payment.find({
-                    organisationId,
-                    eventId,
-                    teamIds: { $in: teamIdsToReset },
-                }).select("_id teamIds");
+                const paymentsQuery = updatedRegistration?.paymentId
+                    ? { _id: updatedRegistration.paymentId }
+                    : {
+                        organisationId,
+                        eventId,
+                        teamIds: { $in: teamIdsToReset },
+                    };
+
+                const payments = await Payment.find(paymentsQuery).select("_id teamIds");
 
                 await Promise.all(
                     payments.map(async (payment) => {

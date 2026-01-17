@@ -83,7 +83,9 @@ export const RegistrationFilters = ({
         const orgName = reg.organisationId && typeof reg.organisationId === 'object'
           ? reg.organisationId.typeDetail || ''
           : ''
-        const category = reg.category || ''
+        const category = Array.isArray(reg.categories) && reg.categories.length > 0
+          ? reg.categories.join(' ')
+          : (reg.category || '')
         
         return (
           orgId.toLowerCase().includes(query) ||
@@ -100,7 +102,12 @@ export const RegistrationFilters = ({
 
     // Category filter
     if (selectedCategory !== 'all') {
-      filtered = filtered.filter((reg: any) => reg.category === selectedCategory)
+      filtered = filtered.filter((reg: any) => {
+        if (Array.isArray(reg.categories)) {
+          return reg.categories.includes(selectedCategory)
+        }
+        return reg.category === selectedCategory
+      })
     }
 
     // Organisation type filter

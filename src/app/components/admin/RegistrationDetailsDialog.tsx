@@ -198,7 +198,11 @@ export const RegistrationDetailsDialog = ({
             <div className='space-y-3'>
               <div>
                 <p className='text-sm text-muted-foreground'>Категори</p>
-                <p className='p-3 bg-primary/10 rounded font-medium mt-1'>{registration.category || 'N/A'}</p>
+                <p className='p-3 bg-primary/10 rounded font-medium mt-1'>
+                  {Array.isArray(registration.categories) && registration.categories.length > 0
+                    ? registration.categories.join(', ')
+                    : registration.category || 'N/A'}
+                </p>
               </div>
               <div>
                 <p className='text-sm text-muted-foreground'>Тэмцээн</p>
@@ -209,37 +213,67 @@ export const RegistrationDetailsDialog = ({
 
           <Separator />
 
-          {/* Team Members */}
-          <div>
-            <h3 className='font-semibold text-lg mb-3 flex items-center gap-2'>
-              <Users size={20} />
-              Оролцогчид ({registration.contestantIds?.length || 0})
-            </h3>
-            <div className='space-y-2'>
-              {registration.contestantIds && registration.contestantIds.length > 0 ? (
-                registration.contestantIds.map((contestant: any, index: number) => {
-                  // Handle both populated (object) and unpopulated (string) contestant IDs
-                  const contestantName = typeof contestant === 'object' && contestant !== null
-                    ? `${contestant.ovog || ''} ${contestant.ner || ''}`.trim() || contestant._id
-                    : contestant
-                  const contestantKey = typeof contestant === 'object' && contestant !== null
-                    ? contestant._id || index
-                    : contestant || index
-                    
-                  return (
-                    <div key={contestantKey} className='flex items-center gap-2 p-2 bg-muted rounded'>
-                      <span className='font-medium'>{index + 1}.</span>
-                      <span className='text-sm'>{contestantName}</span>
-                    </div>
-                  )
-                })
-              ) : (
-                <p className='text-sm text-muted-foreground'>Оролцогч бүртгээгүй байна</p>
-              )}
-            </div>
-          </div>
+          {/* Teams (Grouped Registration) */}
+          {Array.isArray(registration.teamIds) && registration.teamIds.length > 0 && (
+            <>
+              <div>
+                <h3 className='font-semibold text-lg mb-3'>Багууд ({registration.teamIds.length})</h3>
+                <div className='space-y-2'>
+                  {registration.teamIds.map((team: any, index: number) => {
+                    const label = typeof team === 'object'
+                      ? (team.teamId || team._id || String(team))
+                      : String(team)
+                    const categoryLabel = typeof team === 'object'
+                      ? (team.categoryCode || team.categoryName)
+                      : null
 
-          <Separator />
+                    return (
+                      <div key={team?._id || team?.toString?.() || index} className='flex items-center gap-2 p-2 bg-muted rounded'>
+                        <span className='font-medium'>{index + 1}.</span>
+                        <span className='text-sm font-mono'>{label}</span>
+                        {categoryLabel && (
+                          <span className='text-xs text-muted-foreground'>({categoryLabel})</span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+              <Separator />
+            </>
+          )}
+
+          {/* Team Members */}
+          {registration.contestantIds && registration.contestantIds.length > 0 && (
+            <>
+              <div>
+                <h3 className='font-semibold text-lg mb-3 flex items-center gap-2'>
+                  <Users size={20} />
+                  Оролцогчид ({registration.contestantIds?.length || 0})
+                </h3>
+                <div className='space-y-2'>
+                  {registration.contestantIds.map((contestant: any, index: number) => {
+                    // Handle both populated (object) and unpopulated (string) contestant IDs
+                    const contestantName = typeof contestant === 'object' && contestant !== null
+                      ? `${contestant.ovog || ''} ${contestant.ner || ''}`.trim() || contestant._id
+                      : contestant
+                    const contestantKey = typeof contestant === 'object' && contestant !== null
+                      ? contestant._id || index
+                      : contestant || index
+                    
+                    return (
+                      <div key={contestantKey} className='flex items-center gap-2 p-2 bg-muted rounded'>
+                        <span className='font-medium'>{index + 1}.</span>
+                        <span className='text-sm'>{contestantName}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <Separator />
+            </>
+          )}
 
           {/* Coach Information */}
           {registration.coachId && (

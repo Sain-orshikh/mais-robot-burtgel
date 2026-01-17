@@ -82,9 +82,12 @@ export interface Event {
     _id: string
     organisationId: string
     category: string
-    contestantIds: string[]
-    coachId: string
-    teamId: string
+    contestantIds?: string[]
+    coachId?: string
+    teamId?: string
+    teamIds?: string[]
+    categories?: string[]
+    paymentId?: string
     registeredAt: string
     status: 'pending' | 'approved' | 'rejected'
     rejectionReason?: string | null

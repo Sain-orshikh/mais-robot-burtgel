@@ -77,6 +77,19 @@ export default function RegistrationsPage() {
       
       // Fetch the selected event with populated organisationId
       const event = await eventApi.getById(selectedEventId)
+
+      // Fetch payments for mapping payment status
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+      const paymentsResponse = await fetch(`${apiUrl}/api/payments/admin/all`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      const payments = paymentsResponse.ok ? await paymentsResponse.json() : []
+      const paymentStatusMap = new Map(
+        payments.map((p: any) => [String(p._id), p.status])
+      )
       
       // Extract registrations from the event
       // The organisationId should be populated by the backend
@@ -84,8 +97,15 @@ export default function RegistrationsPage() {
         ...reg,
         eventId: event._id,
         eventName: event.name,
-        // Calculate payment status from event's payment data if needed
-        paymentStatus: reg.paymentStatus || 'not_uploaded'
+        categoryDisplay: Array.isArray(reg.categories) && reg.categories.length > 0
+          ? (reg.categories.length > 1
+              ? `${reg.categories.join(', ')} (${reg.categories.length})`
+              : reg.categories[0])
+          : (reg.category || 'N/A'),
+        // Payment status from payment record if linked
+        paymentStatus: reg.paymentId
+          ? (paymentStatusMap.get(String(reg.paymentId)) || 'not_uploaded')
+          : 'not_uploaded'
       }))
       
       setRegistrations(regs)
@@ -117,36 +137,10 @@ export default function RegistrationsPage() {
       })
       if (response.ok) {
         const payments = await response.json()
-        
-        // Extract the org ID (handle both string and populated object)
-        const orgId = registration.organisationId?._id || registration.organisationId
-        const orgIdStr = typeof orgId === 'string' ? orgId : String(orgId)
-        
-        console.log('Looking for payment:', {
-          orgId: orgIdStr,
-          eventId: selectedEventId,
-          totalPayments: payments.length
-        })
-        
-        // Find payment matching this registration's organisation and event
-        const payment = payments.find((p: any) => {
-          // Handle populated organisationId and eventId
-          const pOrgId = typeof p.organisationId === 'object' ? p.organisationId._id : p.organisationId
-          const pEventId = typeof p.eventId === 'object' ? p.eventId._id : p.eventId
-          
-          const pOrgIdStr = typeof pOrgId === 'string' ? pOrgId : String(pOrgId)
-          const pEventIdStr = typeof pEventId === 'string' ? pEventId : String(pEventId)
-          
-          const match = pOrgIdStr === orgIdStr && pEventIdStr === selectedEventId
-          
-          if (match) {
-            console.log('Found matching payment:', p)
-          }
-          
-          return match
-        })
-        
-        console.log('Selected payment:', payment || 'No payment found')
+        const payment = registration?.paymentId
+          ? payments.find((p: any) => String(p._id) === String(registration.paymentId))
+          : null
+
         setSelectedPayment(payment || null)
       } else {
         console.error('Failed to fetch payments:', response.status)
@@ -274,7 +268,7 @@ export default function RegistrationsPage() {
         orgName,
         orgType,
         aimag,
-        reg.category || '',
+        reg.categoryDisplay || reg.category || '',
         reg.registeredAt || '',
         reg.paymentStatus || 'not_uploaded',
         reg.status || 'pending'

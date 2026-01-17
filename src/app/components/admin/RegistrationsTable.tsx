@@ -95,7 +95,7 @@ export const RegistrationsTable = ({ registrations, onViewDetails }: Registratio
             <TableHead className='w-[120px]'>Огноо</TableHead>
             <TableHead className='w-[120px]'>Төлбөр</TableHead>
             <TableHead className='w-[120px]'>Төлөв</TableHead>
-            <TableHead className='text-right w-[80px]'>Үйлдэл</TableHead>
+            <TableHead className='text-right w-20'>Үйлдэл</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -121,7 +121,7 @@ export const RegistrationsTable = ({ registrations, onViewDetails }: Registratio
                   {getAimag(reg.organisationId)}
                 </TableCell>
                 <TableCell className='text-sm max-w-[200px] truncate'>
-                  {reg.category || 'N/A'}
+                  {reg.categoryDisplay || reg.category || 'N/A'}
                 </TableCell>
                 <TableCell className='text-sm'>
                   {reg.registeredAt ? format(new Date(reg.registeredAt), 'MM/dd HH:mm') : 'N/A'}

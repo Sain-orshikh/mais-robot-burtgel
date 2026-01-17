@@ -40,34 +40,30 @@ export const submitPayment = async (req, res) => {
             { $set: { paymentId: payment._id } }
         );
 
-        // Create registrations for paid teams (if not already registered)
+        // Create a single grouped registration for this payment
         const event = await Event.findById(eventId);
 
         if (event) {
-            const existingTeamIds = new Set(
-                (event.registrations || [])
-                    .map((reg) => reg.teamId)
-                    .filter(Boolean)
-                    .map((id) => id.toString())
+            const categories = Array.from(
+                new Set(
+                    teams.map((team) => team.categoryCode || team.categoryName).filter(Boolean)
+                )
             );
 
-            const teamsToRegister = teams.filter((team) => !existingTeamIds.has(team._id.toString()));
-
-            if (teamsToRegister.length > 0) {
-                const newRegistrations = teamsToRegister.map((team) => ({
-                    organisationId,
-                    category: team.categoryCode || team.categoryName,
-                    contestantIds: team.contestantIds,
-                    coachId: team.coachId,
-                    teamId: team._id,
-                    status: "pending",
-                }));
-
-                await Event.updateOne(
-                    { _id: eventId },
-                    { $push: { registrations: { $each: newRegistrations } } }
-                );
-            }
+            await Event.updateOne(
+                { _id: eventId },
+                {
+                    $push: {
+                        registrations: {
+                            organisationId,
+                            teamIds,
+                            categories,
+                            paymentId: payment._id,
+                            status: "pending",
+                        },
+                    },
+                }
+            );
         }
 
         res.status(201).json({ message: "Payment submitted successfully", payment });

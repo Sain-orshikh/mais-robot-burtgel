@@ -600,11 +600,18 @@ export default function EventDetailPage() {
                 
                 // Find corresponding registration to show status
                 const registration = myRegistrations.find((reg: any) => {
-                  const regTeamId = reg?.teamId
                   const teamId = team._id
+                  const regTeamIds = Array.isArray(reg?.teamIds) ? reg.teamIds : []
+
+                  if (teamId && regTeamIds.some((id: any) => id.toString() === teamId.toString())) {
+                    return true
+                  }
+
+                  const regTeamId = reg?.teamId
                   if (regTeamId && teamId && regTeamId.toString() === teamId.toString()) {
                     return true
                   }
+
                   const regCategory = reg?.category
                   const teamCategoryCode = team.categoryCode
                   const categoryName = category?.name
