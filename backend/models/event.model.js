@@ -18,7 +18,11 @@ const eventSchema = new mongoose.Schema(
             type: Date,
             required: true,
         },
-        registrationDeadline: {
+        registrationStart: {
+            type: Date,
+            required: true,
+        },
+        registrationEnd: {
             type: Date,
             required: true,
         },
@@ -80,14 +84,26 @@ const eventSchema = new mongoose.Schema(
                 }
             }
         ],
-        status: {
-            type: String,
-            enum: ['upcoming', 'ongoing', 'completed', 'cancelled'],
-            default: 'upcoming',
-        },
     },
-    { timestamps: true }
+    { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
+
+// Virtual field to compute event status based on dates
+eventSchema.virtual('status').get(function() {
+    const now = new Date();
+    
+    if (now < this.registrationStart) {
+        return 'upcoming'; // Before registration opens
+    } else if (now >= this.registrationStart && now < this.registrationEnd) {
+        return 'registration-open'; // Registration is open
+    } else if (now >= this.registrationEnd && now < this.startDate) {
+        return 'registration-closed'; // Registration closed, event not started
+    } else if (now >= this.startDate && now < this.endDate) {
+        return 'ongoing'; // Event is happening
+    } else {
+        return 'completed'; // Event has ended
+    }
+});
 
 const Event = mongoose.model("Event", eventSchema);
 

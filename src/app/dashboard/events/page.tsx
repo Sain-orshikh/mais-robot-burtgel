@@ -89,8 +89,11 @@ export default function EventsPage() {
               {/* Dates */}
               <div className='mt-3 text-xs text-gray-600 text-center space-y-1'>
                 <div>
-                  <span className='font-medium'>Registration Deadline:</span>{' '}
-                  {new Date(event.registrationDeadline).toLocaleDateString('en-US', {
+                  <span className='font-medium'>Registration Period:</span>{' '}
+                  {new Date(event.registrationStart).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                  })} - {new Date(event.registrationEnd).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'short',
                     day: 'numeric',

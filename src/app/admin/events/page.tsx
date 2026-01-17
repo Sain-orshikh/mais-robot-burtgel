@@ -49,9 +49,10 @@ interface Event {
   description: string
   startDate: string
   endDate: string
-  registrationDeadline: string
+  registrationStart: string
+  registrationEnd: string
   location: string
-  status: 'open' | 'closed' | 'completed'
+  status?: 'upcoming' | 'registration-open' | 'registration-closed' | 'ongoing' | 'completed'
   categories: {
     categoryCode: string
     name: string
@@ -69,14 +70,96 @@ export default function AdminEventsPage() {
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
   const [saving, setSaving] = useState(false)
 
+  // Helper to convert date to UB time (GMT+8)
+  const toUBDateTime = (dateStr: string) => {
+    const date = new Date(dateStr)
+    // Add 8 hours for UB timezone
+    const ubDate = new Date(date.getTime() + (8 * 60 * 60 * 1000))
+    const hours = ubDate.getUTCHours()
+    const minutes = ubDate.getUTCMinutes()
+    const isPM = hours >= 12
+    const displayHours = hours % 12 || 12
+    
+    return {
+      date: ubDate.toISOString().split('T')[0],
+      time: `${String(displayHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`,
+      ampm: isPM ? 'PM' : 'AM'
+    }
+  }
+
+  // Helper to convert UB time to UTC ISO string
+  const toUTCISO = (date: string, time: string, ampm: string) => {
+    if (!date || !time) {
+      throw new Error('Date and time are required')
+    }
+    
+    // Parse the time from HH:mm format (24-hour from input[type=time])
+    const [inputHours, minutes] = time.split(':').map(Number)
+    if (isNaN(inputHours) || isNaN(minutes)) {
+      throw new Error('Invalid time format')
+    }
+    
+    // The input gives us 24-hour time, but we also have AM/PM selector
+    // We need to convert the input hours to 12-hour format first, then apply AM/PM
+    let hour24 = inputHours
+    
+    // If time input shows 12-hour format (0-12), convert with AM/PM
+    // Otherwise if it's already 24-hour (0-23), use it directly
+    if (inputHours <= 12) {
+      // Treat as 12-hour format and apply AM/PM
+      hour24 = inputHours
+      if (ampm === 'PM' && inputHours !== 12) hour24 += 12
+      if (ampm === 'AM' && inputHours === 12) hour24 = 0
+    }
+    
+    // Create date in UB time
+    const ubDate = new Date(`${date}T${String(hour24).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`)
+    if (isNaN(ubDate.getTime())) {
+      throw new Error('Invalid date or time value')
+    }
+    
+    // Subtract 8 hours to convert to UTC
+    const utcDate = new Date(ubDate.getTime() - (8 * 60 * 60 * 1000))
+    return utcDate.toISOString()
+  }
+
+  // Helper to compute event status based on dates
+  const getEventStatus = (event: Event): { status: string; color: string; label: string } => {
+    const now = new Date()
+    const regStart = new Date(event.registrationStart)
+    const regEnd = new Date(event.registrationEnd)
+    const eventStart = new Date(event.startDate)
+    const eventEnd = new Date(event.endDate)
+
+    if (now < regStart) {
+      return { status: 'upcoming', color: 'bg-gray-100 text-gray-800', label: 'Upcoming' }
+    } else if (now >= regStart && now < regEnd) {
+      return { status: 'registration-open', color: 'bg-green-100 text-green-800', label: 'Registration Open' }
+    } else if (now >= regEnd && now < eventStart) {
+      return { status: 'registration-closed', color: 'bg-yellow-100 text-yellow-800', label: 'Registration Closed' }
+    } else if (now >= eventStart && now < eventEnd) {
+      return { status: 'ongoing', color: 'bg-blue-100 text-blue-800', label: 'Ongoing' }
+    } else {
+      return { status: 'completed', color: 'bg-gray-100 text-gray-800', label: 'Completed' }
+    }
+  }
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     startDate: '',
+    startTime: '09:00',
+    startAMPM: 'AM',
     endDate: '',
-    registrationDeadline: '',
+    endTime: '05:00',
+    endAMPM: 'PM',
+    registrationStartDate: '',
+    registrationStartTime: '09:00',
+    registrationStartAMPM: 'AM',
+    registrationEndDate: '',
+    registrationEndTime: '11:59',
+    registrationEndAMPM: 'PM',
     location: '',
-    status: 'open' as 'open' | 'closed' | 'completed',
     selectedCategories: [] as string[],
   })
 
@@ -107,10 +190,18 @@ export default function AdminEventsPage() {
       name: '',
       description: '',
       startDate: '',
+      startTime: '09:00',
+      startAMPM: 'AM',
       endDate: '',
-      registrationDeadline: '',
+      endTime: '05:00',
+      endAMPM: 'PM',
+      registrationStartDate: '',
+      registrationStartTime: '09:00',
+      registrationStartAMPM: 'AM',
+      registrationEndDate: '',
+      registrationEndTime: '11:59',
+      registrationEndAMPM: 'PM',
       location: '',
-      status: 'open',
       selectedCategories: [],
     })
     setIsModalOpen(true)
@@ -126,14 +217,27 @@ export default function AdminEventsPage() {
       return matchingCat?.code || ''
     }).filter(Boolean)
     
+    const startDateTime = toUBDateTime(event.startDate)
+    const endDateTime = toUBDateTime(event.endDate)
+    const regStartDateTime = toUBDateTime(event.registrationStart)
+    const regEndDateTime = toUBDateTime(event.registrationEnd)
+    
     setFormData({
       name: event.name,
       description: event.description,
-      startDate: new Date(event.startDate).toISOString().split('T')[0],
-      endDate: new Date(event.endDate).toISOString().split('T')[0],
-      registrationDeadline: new Date(event.registrationDeadline).toISOString().split('T')[0],
+      startDate: startDateTime.date,
+      startTime: startDateTime.time,
+      startAMPM: startDateTime.ampm,
+      endDate: endDateTime.date,
+      endTime: endDateTime.time,
+      endAMPM: endDateTime.ampm,
+      registrationStartDate: regStartDateTime.date,
+      registrationStartTime: regStartDateTime.time,
+      registrationStartAMPM: regStartDateTime.ampm,
+      registrationEndDate: regEndDateTime.date,
+      registrationEndTime: regEndDateTime.time,
+      registrationEndAMPM: regEndDateTime.ampm,
       location: event.location,
-      status: event.status,
       selectedCategories: categoryCodes,
     })
     setIsModalOpen(true)
@@ -150,10 +254,19 @@ export default function AdminEventsPage() {
 
   const handleSaveEvent = async () => {
     if (!formData.name || !formData.description || !formData.startDate || 
-        !formData.endDate || !formData.registrationDeadline || !formData.location) {
+        !formData.endDate || !formData.registrationStartDate || !formData.registrationEndDate || !formData.location) {
       toast({
         title: 'Validation Error',
         description: 'Please fill in all required fields',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (!formData.startTime || !formData.endTime || !formData.registrationStartTime || !formData.registrationEndTime) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please set the time for all dates',
         variant: 'destructive',
       })
       return
@@ -184,11 +297,11 @@ export default function AdminEventsPage() {
       const submitData = {
         name: formData.name,
         description: formData.description,
-        startDate: new Date(formData.startDate).toISOString(),
-        endDate: new Date(formData.endDate).toISOString(),
-        registrationDeadline: new Date(formData.registrationDeadline).toISOString(),
+        startDate: toUTCISO(formData.startDate, formData.startTime, formData.startAMPM),
+        endDate: toUTCISO(formData.endDate, formData.endTime, formData.endAMPM),
+        registrationStart: toUTCISO(formData.registrationStartDate, formData.registrationStartTime, formData.registrationStartAMPM),
+        registrationEnd: toUTCISO(formData.registrationEndDate, formData.registrationEndTime, formData.registrationEndAMPM),
         location: formData.location,
-        status: formData.status,
         categories,
       }
 
@@ -288,7 +401,7 @@ export default function AdminEventsPage() {
                 <TableHead>Event Name</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Registration Deadline</TableHead>
+                <TableHead>Registration Period</TableHead>
                 <TableHead>Event Date</TableHead>
                 <TableHead>Categories</TableHead>
                 <TableHead className='text-right'>Actions</TableHead>
@@ -302,27 +415,28 @@ export default function AdminEventsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                events.map((event) => (
+                events.map((event) => {
+                  const eventStatus = getEventStatus(event)
+                  return (
                   <TableRow key={event._id}>
                     <TableCell className='font-medium'>{event.name}</TableCell>
                     <TableCell>{event.location}</TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        event.status === 'open' 
-                          ? 'bg-green-100 text-green-700' 
-                          : event.status === 'closed'
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-gray-100 text-gray-700'
-                      }`}>
-                        {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${eventStatus.color}`}>
+                        {eventStatus.label}
                       </span>
                     </TableCell>
                     <TableCell>
-                      {new Date(event.registrationDeadline).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}
+                      <div className='text-sm'>
+                        <div>{new Date(event.registrationStart).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        })} - {new Date(event.registrationEnd).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}</div>
+                      </div>
                     </TableCell>
                     <TableCell>
                       {new Date(event.startDate).toLocaleDateString('en-US', {
@@ -358,7 +472,8 @@ export default function AdminEventsPage() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
+                  )
+                })
               )}
             </TableBody>
           </Table>
@@ -412,86 +527,186 @@ export default function AdminEventsPage() {
                 />
               </div>
 
-              <div className='grid grid-cols-3 gap-4'>
-                <div className='grid gap-2'>
-                  <Label htmlFor='registrationDeadline'>
-                    Registration Deadline <span className='text-red-500'>*</span>
-                  </Label>
-                  <Input
-                    id='registrationDeadline'
-                    type='date'
-                    value={formData.registrationDeadline}
-                    onChange={(e) => setFormData({ ...formData, registrationDeadline: e.target.value })}
-                  />
+              {/* Registration Period */}
+              <div className='grid gap-4 p-4 border rounded-lg bg-gray-50'>
+                <h3 className='font-semibold text-sm'>Registration Period (Ulaanbaatar Time GMT+8)</h3>
+                
+                <div className='grid grid-cols-2 gap-4'>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='registrationStartDate'>
+                      Start Date <span className='text-red-500'>*</span>
+                    </Label>
+                    <Input
+                      id='registrationStartDate'
+                      type='date'
+                      value={formData.registrationStartDate}
+                      onChange={(e) => setFormData({ ...formData, registrationStartDate: e.target.value })}
+                    />
+                  </div>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='registrationStartTime'>Time</Label>
+                    <div className='flex gap-2'>
+                      <Input
+                        id='registrationStartTime'
+                        type='time'
+                        value={formData.registrationStartTime}
+                        onChange={(e) => setFormData({ ...formData, registrationStartTime: e.target.value })}
+                        className='flex-1'
+                      />
+                      <select
+                        value={formData.registrationStartAMPM}
+                        onChange={(e) => setFormData({ ...formData, registrationStartAMPM: e.target.value })}
+                        className='border rounded-md px-3 py-2 appearance-none bg-white'
+                        style={{ minWidth: '70px' }}
+                      >
+                        <option value='AM'>AM</option>
+                        <option value='PM'>PM</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
-                <div className='grid gap-2'>
-                  <Label htmlFor='startDate'>
-                    Start Date <span className='text-red-500'>*</span>
-                  </Label>
-                  <Input
-                    id='startDate'
-                    type='date'
-                    value={formData.startDate}
-                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                  />
+                <div className='grid grid-cols-2 gap-4'>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='registrationEndDate'>
+                      End Date <span className='text-red-500'>*</span>
+                    </Label>
+                    <Input
+                      id='registrationEndDate'
+                      type='date'
+                      value={formData.registrationEndDate}
+                      onChange={(e) => setFormData({ ...formData, registrationEndDate: e.target.value })}
+                    />
+                  </div>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='registrationEndTime'>Time</Label>
+                    <div className='flex gap-2'>
+                      <Input
+                        id='registrationEndTime'
+                        type='time'
+                        value={formData.registrationEndTime}
+                        onChange={(e) => setFormData({ ...formData, registrationEndTime: e.target.value })}
+                        className='flex-1'
+                      />
+                      <select
+                        value={formData.registrationEndAMPM}
+                        onChange={(e) => setFormData({ ...formData, registrationEndAMPM: e.target.value })}
+                        className='border rounded-md px-3 py-2 appearance-none bg-white'
+                        style={{ minWidth: '70px' }}
+                      >
+                        <option value='AM'>AM</option>
+                        <option value='PM'>PM</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Event Dates */}
+              <div className='grid gap-4 p-4 border rounded-lg bg-gray-50'>
+                <h3 className='font-semibold text-sm'>Event Dates (Ulaanbaatar Time GMT+8)</h3>
+                
+                <div className='grid grid-cols-2 gap-4'>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='startDate'>
+                      Start Date <span className='text-red-500'>*</span>
+                    </Label>
+                    <Input
+                      id='startDate'
+                      type='date'
+                      value={formData.startDate}
+                      onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                    />
+                  </div>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='startTime'>Time</Label>
+                    <div className='flex gap-2'>
+                      <Input
+                        id='startTime'
+                        type='time'
+                        value={formData.startTime}
+                        onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                        className='flex-1'
+                      />
+                      <select
+                        value={formData.startAMPM}
+                        onChange={(e) => setFormData({ ...formData, startAMPM: e.target.value })}
+                        className='border rounded-md px-3 py-2 appearance-none bg-white'
+                        style={{ minWidth: '70px' }}
+                      >
+                        <option value='AM'>AM</option>
+                        <option value='PM'>PM</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
-                <div className='grid gap-2'>
-                  <Label htmlFor='endDate'>
-                    End Date <span className='text-red-500'>*</span>
-                  </Label>
-                  <Input
-                    id='endDate'
-                    type='date'
-                    value={formData.endDate}
-                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                  />
+                <div className='grid grid-cols-2 gap-4'>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='endDate'>
+                      End Date <span className='text-red-500'>*</span>
+                    </Label>
+                    <Input
+                      id='endDate'
+                      type='date'
+                      value={formData.endDate}
+                      onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                    />
+                  </div>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='endTime'>Time</Label>
+                    <div className='flex gap-2'>
+                      <Input
+                        id='endTime'
+                        type='time'
+                        value={formData.endTime}
+                        onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                        className='flex-1'
+                      />
+                      <select
+                        value={formData.endAMPM}
+                        onChange={(e) => setFormData({ ...formData, endAMPM: e.target.value })}
+                        className='border rounded-md px-3 py-2 appearance-none bg-white'
+                        style={{ minWidth: '70px' }}
+                      >
+                        <option value='AM'>AM</option>
+                        <option value='PM'>PM</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               <div className='grid gap-2'>
-                <Label>
-                  Event Status <span className='text-red-500'>*</span>
-                </Label>
-                <div className='flex gap-4'>
-                  <label className='flex items-center gap-2 cursor-pointer'>
-                    <input
-                      type='radio'
-                      name='status'
-                      value='open'
-                      checked={formData.status === 'open'}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                    />
-                    <span>Open</span>
-                  </label>
-                  <label className='flex items-center gap-2 cursor-pointer'>
-                    <input
-                      type='radio'
-                      name='status'
-                      value='closed'
-                      checked={formData.status === 'closed'}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                    />
-                    <span>Closed</span>
-                  </label>
-                  <label className='flex items-center gap-2 cursor-pointer'>
-                    <input
-                      type='radio'
-                      name='status'
-                      value='completed'
-                      checked={formData.status === 'completed'}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                    />
-                    <span>Completed</span>
-                  </label>
+                <div className='flex items-center justify-between'>
+                  <Label>
+                    Competition Categories <span className='text-red-500'>*</span>
+                  </Label>
+                  <div className='flex gap-2'>
+                    <Button
+                      type='button'
+                      variant='outline'
+                      size='sm'
+                      onClick={() => setFormData({ 
+                        ...formData, 
+                        selectedCategories: AVAILABLE_CATEGORIES.map(c => c.code) 
+                      })}
+                    >
+                      Select All
+                    </Button>
+                    <Button
+                      type='button'
+                      variant='outline'
+                      size='sm'
+                      onClick={() => setFormData({ 
+                        ...formData, 
+                        selectedCategories: [] 
+                      })}
+                    >
+                      Clear All
+                    </Button>
+                  </div>
                 </div>
-              </div>
-
-              <div className='grid gap-2'>
-                <Label>
-                  Competition Categories <span className='text-red-500'>*</span>
-                </Label>
                 <p className='text-sm text-gray-600 mb-2'>Select categories available for this event</p>
                 <div className='grid grid-cols-2 gap-3 border rounded-lg p-4 max-h-60 overflow-y-auto'>
                   {AVAILABLE_CATEGORIES.map((category) => (

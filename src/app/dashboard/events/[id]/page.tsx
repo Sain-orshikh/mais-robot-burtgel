@@ -24,21 +24,37 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-// Category definitions from backend
-const CATEGORIES = [
-  { code: 'MNR', name: 'Mini Sumo RC', maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
-  { code: 'MGR', name: 'Mega Sumo RC', maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
-  { code: 'MNA', name: 'Mini Sumo Auto', maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
-  { code: 'MGA', name: 'Mega Sumo Auto', maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
-  { code: 'RRC', name: 'Robot Rugby', maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 4 },
-  { code: 'DRC', name: 'Drone RC', maxTeamsPerOrg: 5, minContestants: 1, maxContestants: 2 },
-  { code: 'DRA', name: 'Drone Auto', maxTeamsPerOrg: 5, minContestants: 1, maxContestants: 2 },
-  { code: 'LFG', name: 'Line Follower (Lego)', maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
-  { code: 'LFH', name: 'Line Follower (High Speed)', maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
-  { code: 'LFL', name: 'Line Follower (Low Speed)', maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
-  { code: 'LSR', name: 'Lego Sumo', maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
-  { code: 'LUR', name: 'Lego Unknown', maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 3 },
-]
+// Category code mapping for matching event categories with codes
+const CATEGORY_CODE_MAP: { [key: string]: string } = {
+  'Mini Sumo RC': 'MNR',
+  'Mega Sumo RC': 'MGR',
+  'Mini Sumo Auto': 'MNA',
+  'Mega Sumo Auto': 'MGA',
+  'Robot Rugby': 'RRC',
+  'Drone RC': 'DRC',
+  'Drone Auto': 'DRA',
+  'Line Follower (Lego)': 'LFG',
+  'Line Follower (High Speed)': 'LFH',
+  'Line Follower (Low Speed)': 'LFL',
+  'Lego Sumo': 'LSR',
+  'Lego Unknown': 'LUR',
+}
+
+// Backend category configuration (source of truth for rules)
+const BACKEND_CATEGORY_CONFIG: { [key: string]: { maxTeamsPerOrg: number, minContestants: number, maxContestants: number } } = {
+  'MNR': { maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
+  'MGR': { maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
+  'MNA': { maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
+  'MGA': { maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
+  'RRC': { maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 4 },
+  'DRC': { maxTeamsPerOrg: 5, minContestants: 1, maxContestants: 2 },
+  'DRA': { maxTeamsPerOrg: 5, minContestants: 1, maxContestants: 2 },
+  'LFG': { maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
+  'LFH': { maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
+  'LFL': { maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
+  'LSR': { maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
+  'LUR': { maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 3 },
+}
 
 export default function EventDetailPage() {
   const router = useRouter()
@@ -63,6 +79,21 @@ export default function EventDetailPage() {
   
   // Payment state
   const [showPaymentModal, setShowPaymentModal] = useState(false)
+
+  // Map event categories to include codes and use backend config as source of truth
+  const eventCategories = event?.categories.map(cat => {
+    const code = CATEGORY_CODE_MAP[cat.name] || ''
+    const backendConfig = BACKEND_CATEGORY_CONFIG[code]
+    
+    return {
+      code,
+      name: cat.name,
+      // Use backend config if available, otherwise fall back to event data
+      maxTeamsPerOrg: backendConfig?.maxTeamsPerOrg || cat.maxTeamsPerOrg,
+      minContestants: backendConfig?.minContestants || cat.minContestantsPerTeam,
+      maxContestants: backendConfig?.maxContestants || cat.maxContestantsPerTeam,
+    }
+  }) || []
 
   useEffect(() => {
     fetchData()
@@ -99,7 +130,7 @@ export default function EventDetailPage() {
       if (prev.includes(contestantId)) {
         return prev.filter((id) => id !== contestantId)
       } else {
-        const currentCategory = CATEGORIES.find(c => c.code === selectedCategory)
+        const currentCategory = eventCategories.find(c => c.code === selectedCategory)
         if (prev.length < (currentCategory?.maxContestants || 2)) {
           return [...prev, contestantId]
         } else {
@@ -124,8 +155,8 @@ export default function EventDetailPage() {
       return
     }
 
-    const currentCategory = CATEGORIES.find(c => c.code === selectedCategory)
-    if (selectedContestants.length < (currentCategory?.minContestants || 2)) {
+    const currentCategory = eventCategories.find(c => c.code === selectedCategory)
+    if (selectedContestants.length < (currentCategory?.minContestants || 1)) {
       toast({
         title: 'Not Enough Contestants',
         description: `This category requires at least ${currentCategory?.minContestants} contestants`,
@@ -218,18 +249,19 @@ export default function EventDetailPage() {
     )
   }
 
-  // Check if registration is open - allow until 23:59:59 on the deadline date
+  // Check if registration is open
   const isRegistrationOpen = (() => {
-    if (event.status !== 'upcoming' && event.status !== 'ongoing') return false
+    if (!event) return false
+    
+    // Bypass for testing
+    if (process.env.NEXT_PUBLIC_BYPASS_REGISTRATION_CHECK === 'true') return true
     
     const now = new Date()
-    const deadline = new Date(event.registrationDeadline)
+    const regStart = new Date(event.registrationStart)
+    const regEnd = new Date(event.registrationEnd)
     
-    // Compare dates only (ignore time) - check if today's date is <= deadline date
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    const deadlineDate = new Date(deadline.getFullYear(), deadline.getMonth(), deadline.getDate())
-    
-    return today <= deadlineDate
+    // Registration is open if current time is between start and end
+    return now >= regStart && now <= regEnd
   })()
 
   return (
@@ -277,8 +309,10 @@ export default function EventDetailPage() {
           <div className='flex items-center gap-2 text-gray-600'>
             <Calendar className='h-4 w-4' />
             <div>
-              <div className='font-medium'>Registration Deadline:</div>
-              <div>{new Date(event.registrationDeadline).toLocaleDateString('en-US', {
+              <div className='font-medium'>Registration Period:</div>
+              <div>{new Date(event.registrationStart).toLocaleDateString('en-US', {
+                month: 'short', day: 'numeric'
+              })} - {new Date(event.registrationEnd).toLocaleDateString('en-US', {
                 month: 'short', day: 'numeric', year: 'numeric'
               })}</div>
             </div>
@@ -307,7 +341,7 @@ export default function EventDetailPage() {
         </CardHeader>
         <CardContent>
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-            {CATEGORIES.map((category) => {
+            {eventCategories.map((category) => {
               const eventCategory = event.categories.find(c => (c as any).categoryCode === category.code || c.name === category.name)
               const myTeamsInCategory = myTeams.filter(t => t.categoryCode === category.code)
               const canRegisterMore = myTeamsInCategory.length < category.maxTeamsPerOrg
@@ -431,7 +465,7 @@ export default function EventDetailPage() {
                   <SelectValue placeholder="Choose a category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((category) => {
+                  {eventCategories.map((category) => {
                     const myTeamsInCategory = myTeams.filter(t => t.categoryCode === category.code)
                     const canRegister = myTeamsInCategory.length < category.maxTeamsPerOrg
                     
@@ -449,8 +483,8 @@ export default function EventDetailPage() {
               </Select>
               {selectedCategory && (
                 <p className='text-sm text-gray-600 mt-2'>
-                  Team size: {CATEGORIES.find(c => c.code === selectedCategory)?.minContestants}-
-                  {CATEGORIES.find(c => c.code === selectedCategory)?.maxContestants} contestants
+                  Team size: {eventCategories.find(c => c.code === selectedCategory)?.minContestants}-
+                  {eventCategories.find(c => c.code === selectedCategory)?.maxContestants} contestants
                 </p>
               )}
             </div>
@@ -459,7 +493,7 @@ export default function EventDetailPage() {
             {selectedCategory && (
               <div>
                 <Label className='text-base font-semibold mb-3 block'>
-                  2. Select Contestants (required: {CATEGORIES.find(c => c.code === selectedCategory)?.minContestants})
+                  2. Select Contestants (required: {eventCategories.find(c => c.code === selectedCategory)?.minContestants})
                 </Label>
                 <div className='space-y-2 max-h-60 overflow-y-auto border rounded-lg p-4'>
                   {contestants.length === 0 ? (
@@ -485,7 +519,7 @@ export default function EventDetailPage() {
                   )}
                 </div>
                 <p className='text-sm text-gray-500 mt-2'>
-                  Selected: {selectedContestants.length}/{CATEGORIES.find(c => c.code === selectedCategory)?.maxContestants}
+                  Selected: {selectedContestants.length}/{eventCategories.find(c => c.code === selectedCategory)?.maxContestants}
                 </p>
               </div>
             )}
@@ -552,7 +586,7 @@ export default function EventDetailPage() {
           <CardContent>
             <div className='space-y-4'>
               {myTeams.filter(t => t.status === 'active').map((team) => {
-                const category = CATEGORIES.find(c => c.code === team.categoryCode)
+                const category = eventCategories.find(c => c.code === team.categoryCode)
                 
                 // Backend returns populated contestant and coach objects, not just IDs
                 const teamContestants = Array.isArray(team.contestantIds) && typeof team.contestantIds[0] === 'object'
@@ -629,8 +663,10 @@ export default function EventDetailPage() {
         <div className='mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg'>
           <p className='text-yellow-800 text-center'>
             {event.status === 'completed' || event.status === 'cancelled'
-              ? 'Registration for this event has closed.' 
-              : 'Registration deadline has passed.'}
+              ? 'Registration for this event has closed.'
+              : new Date() < new Date(event.registrationStart)
+              ? `Registration opens on ${new Date(event.registrationStart).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+              : 'Registration has ended.'}
           </p>
         </div>
       )}

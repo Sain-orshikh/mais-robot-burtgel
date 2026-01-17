@@ -68,7 +68,8 @@ export interface Event {
   description: string
   startDate: string
   endDate: string
-  registrationDeadline: string
+  registrationStart: string
+  registrationEnd: string
   location: string
   categories: {
     name: string

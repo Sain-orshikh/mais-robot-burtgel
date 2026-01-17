@@ -5,9 +5,9 @@ import Coach from "../models/coach.model.js";
 // Create a new event (Admin only - would need admin middleware)
 export const createEvent = async (req, res) => {
     try {
-        const { name, description, startDate, endDate, registrationDeadline, location, categories } = req.body;
+        const { name, description, startDate, endDate, registrationStart, registrationEnd, location, categories } = req.body;
 
-        if (!name || !description || !startDate || !endDate || !registrationDeadline || !location || !categories) {
+        if (!name || !description || !startDate || !endDate || !registrationStart || !registrationEnd || !location || !categories) {
             return res.status(400).json({ error: "All fields are required" });
         }
 
@@ -16,7 +16,8 @@ export const createEvent = async (req, res) => {
             description,
             startDate,
             endDate,
-            registrationDeadline,
+            registrationStart,
+            registrationEnd,
             location,
             categories,
         });
@@ -80,9 +81,13 @@ export const registerTeam = async (req, res) => {
             return res.status(404).json({ error: "Event not found" });
         }
 
-        // Check if registration deadline has passed
-        if (new Date() > new Date(event.registrationDeadline)) {
-            return res.status(400).json({ error: "Registration deadline has passed" });
+        // Check if registration is open
+        const now = new Date();
+        if (now < new Date(event.registrationStart)) {
+            return res.status(400).json({ error: "Registration has not started yet" });
+        }
+        if (now > new Date(event.registrationEnd)) {
+            return res.status(400).json({ error: "Registration has ended" });
         }
 
         // Find the category in the event
