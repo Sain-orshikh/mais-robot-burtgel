@@ -19,6 +19,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/use-toast'
 
 const provinces = [
+  'Ulaanbaatar',
   'Arkhangai',
   'Bayan-Ölgii',
   'Bayankhongor',

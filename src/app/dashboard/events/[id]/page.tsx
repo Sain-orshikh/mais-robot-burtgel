@@ -25,18 +25,18 @@ import {
 
 // Category definitions from backend
 const CATEGORIES = [
-  { code: 'MNR', name: 'Mini Sumo RC', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'MGR', name: 'Mega Sumo RC', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'MNA', name: 'Mini Sumo Auto', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'MGA', name: 'Mega Sumo Auto', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'RRC', name: 'Robot Rugby', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'DRC', name: 'Drone RC', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'DRA', name: 'Drone Auto', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'LFG', name: 'Line Follower (Lego)', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'LFH', name: 'Line Follower (High Speed)', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'LFL', name: 'Line Follower (Low Speed)', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'LSR', name: 'Lego Sumo', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'LUR', name: 'Lego Unknown', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
+  { code: 'MNR', name: 'Mini Sumo RC', maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
+  { code: 'MGR', name: 'Mega Sumo RC', maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
+  { code: 'MNA', name: 'Mini Sumo Auto', maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
+  { code: 'MGA', name: 'Mega Sumo Auto', maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
+  { code: 'RRC', name: 'Robot Rugby', maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 4 },
+  { code: 'DRC', name: 'Drone RC', maxTeamsPerOrg: 5, minContestants: 1, maxContestants: 2 },
+  { code: 'DRA', name: 'Drone Auto', maxTeamsPerOrg: 5, minContestants: 1, maxContestants: 2 },
+  { code: 'LFG', name: 'Line Follower (Lego)', maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
+  { code: 'LFH', name: 'Line Follower (High Speed)', maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
+  { code: 'LFL', name: 'Line Follower (Low Speed)', maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
+  { code: 'LSR', name: 'Lego Sumo', maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
+  { code: 'LUR', name: 'Lego Unknown', maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
 ]
 
 export default function EventDetailPage() {
