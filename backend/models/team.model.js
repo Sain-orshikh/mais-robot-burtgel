@@ -40,6 +40,11 @@ const teamSchema = new mongoose.Schema(
             enum: ['active', 'withdrawn'],
             default: 'active',
         },
+        paymentId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Payment',
+            default: null,
+        },
     },
     { timestamps: true }
 );

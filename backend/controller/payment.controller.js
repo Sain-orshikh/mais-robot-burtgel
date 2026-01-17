@@ -18,10 +18,10 @@ export const submitPayment = async (req, res) => {
             return res.status(400).json({ error: "Invalid teams" });
         }
 
-        // Check if payment already exists for this event
-        const existingPayment = await Payment.findOne({ organisationId, eventId });
-        if (existingPayment) {
-            return res.status(400).json({ error: "Payment already submitted for this event" });
+        // Check if any of these teams are already paid for
+        const alreadyPaidTeams = teams.filter(team => team.paymentId);
+        if (alreadyPaidTeams.length > 0) {
+            return res.status(400).json({ error: "Some teams are already included in a payment" });
         }
 
         const payment = await Payment.create({
@@ -32,6 +32,12 @@ export const submitPayment = async (req, res) => {
             teamIds,
             status: "pending",
         });
+
+        // Update teams to reference this payment
+        await Team.updateMany(
+            { _id: { $in: teamIds } },
+            { $set: { paymentId: payment._id } }
+        );
 
         res.status(201).json({ message: "Payment submitted successfully", payment });
     } catch (error) {
@@ -46,13 +52,9 @@ export const getPaymentStatus = async (req, res) => {
         const { eventId } = req.params;
         const organisationId = req.organisation._id;
 
-        const payment = await Payment.findOne({ organisationId, eventId });
+        const payments = await Payment.find({ organisationId, eventId }).sort({ submittedAt: -1 });
 
-        if (!payment) {
-            return res.status(404).json({ error: "No payment found" });
-        }
-
-        res.status(200).json(payment);
+        res.status(200).json(payments);
     } catch (error) {
         console.log("Error in getPaymentStatus controller", error.message);
         res.status(500).json({ error: "Internal server error" });
