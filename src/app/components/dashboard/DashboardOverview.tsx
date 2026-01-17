@@ -28,19 +28,22 @@ export function DashboardOverview() {
 
   const fetchStats = async () => {
     try {
-      const [contestants, coaches, events] = await Promise.all([
+      const [contestants, coaches, events, teams] = await Promise.all([
         contestantApi.getAll(),
         coachApi.getAll(),
         eventApi.getAll(),
+        teamApi.getAll(),
       ])
       
       // Count upcoming events (upcoming or ongoing status)
       const upcoming = events.filter(e => e.status === 'upcoming' || e.status === 'ongoing').length
       
+      const activeTeamsCount = teams.filter((team: any) => team.status === 'active').length
+
       setStats({
         contestants: contestants.length,
         coaches: coaches.length,
-        activeTeams: 0, // Will be updated when teams are loaded
+        activeTeams: activeTeamsCount,
         upcomingEvents: upcoming,
       })
     } catch (error) {
@@ -70,15 +73,15 @@ export function DashboardOverview() {
     {
       step: 3,
       title: 'Register Your Teams',
-      description: 'Click on an event, select a category, choose 2 contestants and 1 coach to form a team.',
+      description: 'Click on an event, select a category, choose 2–4 contestants (depending on the category) and 1 coach to form a team.',
       icon: Trophy,
       color: 'bg-green-500',
       action: '/dashboard/events',
     },
     {
       step: 4,
-      title: 'Manage Registrations',
-      description: 'Track your registered teams, view details, and withdraw if needed before the deadline.',
+      title: 'Submit Payment',
+      description: 'Upload payment receipt and submit — 20,000₮ per team. You can track the status after submission.',
       icon: CheckCircle2,
       color: 'bg-orange-500',
       action: '/dashboard/events',
@@ -88,7 +91,7 @@ export function DashboardOverview() {
   return (
     <div className='container mx-auto px-6 py-8'>
       {/* Organization Header */}
-      <div className='mb-8 bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-lg border border-blue-100'>
+      <div className='mb-8 bg-linear-to-r from-blue-50 to-purple-50 p-6 rounded-lg border border-blue-100'>
         <h1 className='text-3xl font-bold text-gray-800 mb-2'>Welcome back!</h1>
         <p className='text-lg text-gray-700 font-medium'>{organisation?.typeDetail || 'Organization'}</p>
         <div className='flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-600'>
@@ -247,7 +250,7 @@ export function DashboardOverview() {
             <CardHeader>
               <CardTitle className='text-lg'>Quick Actions</CardTitle>
             </CardHeader>
-            <CardContent className='space-y-2'>
+            <CardContent className='gap-y-3'>
               <Link href='/dashboard/team-members/contestant'>
                 <Button className='w-full bg-blue-500 hover:bg-blue-600' size='sm'>
                   <Users className='mr-2' size={16} />
@@ -255,13 +258,13 @@ export function DashboardOverview() {
                 </Button>
               </Link>
               <Link href='/dashboard/team-members/coach'>
-                <Button className='w-full bg-purple-500 hover:bg-purple-600' size='sm'>
+                <Button className='w-full bg-purple-500 hover:bg-purple-600 mt-1' size='sm'>
                   <UserPlus className='mr-2' size={16} />
                   Add Coach
                 </Button>
               </Link>
               <Link href='/dashboard/events'>
-                <Button className='w-full bg-green-500 hover:bg-green-600' size='sm'>
+                <Button className='w-full bg-green-500 hover:bg-green-600 mt-1' size='sm'>
                   <Calendar className='mr-2' size={16} />
                   Browse Events
                 </Button>
@@ -279,19 +282,19 @@ export function DashboardOverview() {
             </CardHeader>
             <CardContent className='space-y-3 text-sm text-gray-700'>
               <div className='flex gap-2'>
-                <span className='text-orange-500 flex-shrink-0'>•</span>
+                <span className='text-orange-500 shrink-0'>•</span>
                 <p>Each team requires <strong>1-4 contestants</strong> (varies by category) and <strong>1 coach</strong></p>
               </div>
               <div className='flex gap-2'>
-                <span className='text-orange-500 flex-shrink-0'>•</span>
+                <span className='text-orange-500 shrink-0'>•</span>
                 <p>Maximum <strong>10 teams per category</strong> (5 for Drone categories)</p>
               </div>
               <div className='flex gap-2'>
-                <span className='text-orange-500 flex-shrink-0'>•</span>
+                <span className='text-orange-500 shrink-0'>•</span>
                 <p>Register before the <strong>deadline</strong> shown on each event</p>
               </div>
               <div className='flex gap-2'>
-                <span className='text-orange-500 flex-shrink-0'>•</span>
+                <span className='text-orange-500 shrink-0'>•</span>
                 <p>Teams can be withdrawn anytime before the event starts</p>
               </div>
             </CardContent>

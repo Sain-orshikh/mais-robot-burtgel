@@ -26,6 +26,10 @@ const teamSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
+        robotName: {
+            type: String,
+            required: true,
+        },
         contestantIds: [{
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Contestant',

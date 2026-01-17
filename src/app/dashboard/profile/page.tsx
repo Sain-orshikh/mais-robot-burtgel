@@ -29,6 +29,12 @@ export default function ProfilePage() {
     email: '',
   })
 
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  })
+
   useEffect(() => {
     if (organisation) {
       setFormData({
@@ -80,8 +86,90 @@ export default function ProfilePage() {
     }
   }
 
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all password fields',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      toast({
+        title: 'Validation Error',
+        description: 'Password must be at least 6 characters',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast({
+        title: 'Validation Error',
+        description: 'Passwords do not match',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await fetch(`${API_URL}/api/organisations/update`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Password update failed')
+      }
+
+      toast({
+        title: 'Password updated',
+        description: 'Your password has been updated successfully',
+      })
+
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
+    } catch (error) {
+      toast({
+        title: 'Update failed',
+        description: error instanceof Error ? error.message : 'Please try again',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   if (!organisation) {
     return null
+  }
+
+  const formatRegisteredAt = (value?: string) => {
+    if (!value) return 'N/A'
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return value
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'Asia/Ulaanbaatar',
+      timeZoneName: 'short',
+    }).format(date)
   }
 
   return (
@@ -123,7 +211,7 @@ export default function ProfilePage() {
           </Card>
 
           {/* Registration Info Card */}
-          <Card className="lg:flex-1">
+          <Card>
             <CardHeader>
               <CardTitle className="text-lg">Registration Details</CardTitle>
             </CardHeader>
@@ -131,13 +219,7 @@ export default function ProfilePage() {
               <div>
                 <Label className="text-gray-600 text-xs">Registered At</Label>
                 <p className="font-medium">
-                  {organisation.createdAt 
-                    ? new Date(organisation.createdAt).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })
-                    : 'N/A'}
+                  {formatRegisteredAt(organisation.createdAt)}
                 </p>
               </div>
             </CardContent>
@@ -145,7 +227,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Right Column - Editable Form */}
-        <div className="lg:col-span-2 lg:h-full flex flex-col">
+        <div className="lg:col-span-2 lg:h-full flex flex-col space-y-6">
           <Card className="lg:flex-1 flex flex-col">
             <CardHeader>
               <CardTitle>Edit Profile Information</CardTitle>
@@ -261,6 +343,50 @@ export default function ProfilePage() {
                     Cancel
                   </Button>
                 </div>
+              </CardContent>
+            </form>
+          </Card>
+
+          <Card id="password">
+            <CardHeader>
+              <CardTitle>Change Password</CardTitle>
+              <CardDescription>Update your account password</CardDescription>
+            </CardHeader>
+            <form onSubmit={handleChangePassword}>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="currentPassword">Current Password</Label>
+                  <Input
+                    id="currentPassword"
+                    type="password"
+                    value={passwordData.currentPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">New Password</Label>
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    value={passwordData.newPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={isLoading}>
+                  {isLoading ? 'Updating...' : 'Update Password'}
+                </Button>
               </CardContent>
             </form>
           </Card>

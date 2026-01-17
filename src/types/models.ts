@@ -47,6 +47,7 @@ export interface Team {
   eventId: string
   categoryCode: string
   categoryName: string
+  robotName: string
   contestantIds: string[] | Contestant[]
   coachId: string | Coach
   status: 'active' | 'withdrawn'
@@ -121,6 +122,7 @@ export interface CoachFormData {
 export interface TeamFormData {
   eventId: string
   categoryCode: string
+  robotName: string
   contestantIds: string[]
   coachId: string
 }

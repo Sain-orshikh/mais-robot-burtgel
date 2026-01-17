@@ -10,6 +10,7 @@ import { paymentApi } from '@/lib/api/payments'
 import { Event, Contestant, Coach, Team } from '@/types/models'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft, Users, Trophy, Calendar, MapPin, CreditCard, CheckCircle2, XCircle, Clock, AlertCircle, RefreshCw } from 'lucide-react'
@@ -74,6 +75,7 @@ export default function EventDetailPage() {
   // Team creation form state
   const [showTeamForm, setShowTeamForm] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState<string>('')
+  const [robotName, setRobotName] = useState<string>('')
   const [selectedContestants, setSelectedContestants] = useState<string[]>([])
   const [selectedCoach, setSelectedCoach] = useState<string>('')
   const [creating, setCreating] = useState(false)
@@ -167,10 +169,10 @@ export default function EventDetailPage() {
   }
 
   const handleCreateTeam = async () => {
-    if (!selectedCategory || selectedContestants.length === 0 || !selectedCoach) {
+    if (!selectedCategory || !robotName || selectedContestants.length === 0 || !selectedCoach) {
       toast({
         title: 'Incomplete Selection',
-        description: 'Please select category, contestants, and coach',
+        description: 'Please select category, robot name, contestants, and coach',
         variant: 'destructive',
       })
       return
@@ -191,6 +193,7 @@ export default function EventDetailPage() {
       await teamApi.create({
         eventId,
         categoryCode: selectedCategory,
+        robotName,
         contestantIds: selectedContestants,
         coachId: selectedCoach,
       })
@@ -203,6 +206,7 @@ export default function EventDetailPage() {
       // Reset form and refresh teams
       setShowTeamForm(false)
       setSelectedCategory('')
+      setRobotName('')
       setSelectedContestants([])
       setSelectedCoach('')
       fetchData()
@@ -509,11 +513,27 @@ export default function EventDetailPage() {
               </div>
             )}
 
+            {/* Step 4: Robot Name */}
+            {selectedContestants.length > 0 && selectedCoach && (
+              <div>
+                <Label className='text-base font-semibold mb-3 block'>
+                  4. Robot Name
+                </Label>
+                <Input
+                  id='robotName'
+                  type='text'
+                  placeholder='Enter robot name'
+                  value={robotName}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRobotName(e.target.value)}
+                />
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className='flex gap-3 pt-4'>
               <Button
                 onClick={handleCreateTeam}
-                disabled={!selectedCategory || selectedContestants.length === 0 || !selectedCoach || creating}
+                disabled={!selectedCategory || !robotName || selectedContestants.length === 0 || !selectedCoach || creating}
                 className='bg-green-600 hover:bg-green-700'
               >
                 {creating ? 'Creating...' : 'Create Team'}
@@ -716,6 +736,7 @@ export default function EventDetailPage() {
                           )}
                         </div>
                         <div className='text-sm text-gray-600'>{category?.name}</div>
+                        <div className='text-xs text-gray-500'>Robot: {team.robotName || 'N/A'}</div>
                         <div className='flex items-center gap-2 mt-1'>
                           {(() => {
                             // Find payment for this team

@@ -29,6 +29,10 @@ export function DashboardHeader({ onToggleSidebar, isSidebarOpen }: DashboardHea
     router.push('/dashboard/profile')
   }
 
+  const handleChangePassword = () => {
+    router.push('/dashboard/profile#password')
+  }
+
   return (
     <header className='bg-linear-to-r from-blue-400 to-blue-500 text-white shadow-md'>
       <div className='flex items-center justify-between px-6 py-3'>
@@ -64,6 +68,9 @@ export function DashboardHeader({ onToggleSidebar, isSidebarOpen }: DashboardHea
             <DropdownMenuContent align='end' className='w-48'>
               <DropdownMenuItem onClick={handleProfile}>
                 My Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleChangePassword}>
+                Change Password
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleLogout} className='text-red-600'>
                 Log Out

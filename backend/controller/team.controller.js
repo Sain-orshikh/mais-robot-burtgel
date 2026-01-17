@@ -8,12 +8,12 @@ import { EVENT_CATEGORIES } from "../config/categories.js";
 // Create a new team and register for event
 export const createTeam = async (req, res) => {
     try {
-        const { eventId, categoryCode, contestantIds, coachId } = req.body;
+        const { eventId, categoryCode, contestantIds, coachId, robotName } = req.body;
         const organisationId = req.organisation._id;
 
         // Validate inputs
-        if (!eventId || !categoryCode || !contestantIds || contestantIds.length === 0 || !coachId) {
-            return res.status(400).json({ error: "Event, category, contestants, and coach are required" });
+        if (!eventId || !categoryCode || !contestantIds || contestantIds.length === 0 || !coachId || !robotName) {
+            return res.status(400).json({ error: "Event, category, robot name, contestants, and coach are required" });
         }
 
         // Get event
@@ -89,6 +89,7 @@ export const createTeam = async (req, res) => {
             eventId,
             categoryCode,
             categoryName: categoryConfig.name,
+            robotName,
             contestantIds,
             coachId,
         });
