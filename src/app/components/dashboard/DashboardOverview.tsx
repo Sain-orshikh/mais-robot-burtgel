@@ -35,8 +35,9 @@ export function DashboardOverview() {
         teamApi.getAll(),
       ])
       
-      // Count upcoming events (upcoming or ongoing status)
-      const upcoming = events.filter(e => e.status === 'upcoming' || e.status === 'ongoing').length
+      // Count upcoming events (startDate not passed)
+      const now = new Date()
+      const upcoming = events.filter(e => new Date(e.startDate) >= now).length
       
       const activeTeamsCount = teams.filter((team: any) => team.status === 'active').length
 
@@ -96,13 +97,13 @@ export function DashboardOverview() {
         <p className='text-lg text-gray-700 font-medium'>{organisation?.typeDetail || 'Organization'}</p>
         <div className='flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-600'>
           <span className='flex items-center gap-1'>
-            <span className='text-gray-400'>📍</span> {organisation?.aimag || 'Mongolia'}
+            <span className='text-gray-400'></span> {organisation?.aimag || 'Mongolia'}
           </span>
           <span className='flex items-center gap-1'>
             <span className='text-blue-500 font-medium'>Type:</span> {organisation?.type || 'Company'}
           </span>
           <span className='flex items-center gap-1'>
-            <span className='text-gray-500'>📞</span> {organisation?.phoneNumber}
+            <span className='text-gray-500'></span> {organisation?.phoneNumber}
           </span>
         </div>
       </div>

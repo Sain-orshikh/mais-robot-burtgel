@@ -102,7 +102,6 @@ export function DashboardSidebar() {
               {organisation?.typeDetail || organisation?.type || 'Organization'}
             </div>
             <div className='text-white/80 text-xs mt-1 flex items-center gap-1'>
-              <span>📍</span>
               <span className='truncate'>{organisation?.aimag || 'Mongolia'}</span>
             </div>
           </div>
