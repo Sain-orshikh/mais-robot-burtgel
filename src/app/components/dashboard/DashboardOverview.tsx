@@ -280,11 +280,11 @@ export function DashboardOverview() {
             <CardContent className='space-y-3 text-sm text-gray-700'>
               <div className='flex gap-2'>
                 <span className='text-orange-500 flex-shrink-0'>•</span>
-                <p>Each team requires <strong>2 contestants</strong> and <strong>1 coach</strong></p>
+                <p>Each team requires <strong>1-4 contestants</strong> (varies by category) and <strong>1 coach</strong></p>
               </div>
               <div className='flex gap-2'>
                 <span className='text-orange-500 flex-shrink-0'>•</span>
-                <p>Maximum <strong>2 teams per category</strong> per organization</p>
+                <p>Maximum <strong>10 teams per category</strong> (5 for Drone categories)</p>
               </div>
               <div className='flex gap-2'>
                 <span className='text-orange-500 flex-shrink-0'>•</span>
