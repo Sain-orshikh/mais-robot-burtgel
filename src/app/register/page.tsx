@@ -40,6 +40,7 @@ const provinces = [
   'Töv',
   'Uvs',
   'Zavkhan',
+  'Ulaanbaatar',
 ]
 
 const institutionTypes = ['company', 'school', 'individual']
