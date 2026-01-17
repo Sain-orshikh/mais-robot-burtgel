@@ -811,7 +811,7 @@ export default function EventDetailPage() {
                             <div className='text-sm text-red-700'>{registration.rejectionReason}</div>
                             <div className='mt-2'>
                               <p className='text-xs text-red-600'>
-                                You can register again with the necessary corrections.
+                                You can register again with the necessary corrections. Please issue a refund request to our email if you have already made a payment.
                               </p>
                             </div>
                           </div>
