@@ -73,6 +73,10 @@ const eventSchema = new mongoose.Schema(
                     ref: 'Coach',
                     required: true,
                 },
+                teamId: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'Team',
+                },
                 registeredAt: {
                     type: Date,
                     default: Date.now,
@@ -81,7 +85,11 @@ const eventSchema = new mongoose.Schema(
                     type: String,
                     enum: ['pending', 'approved', 'rejected'],
                     default: 'pending',
-                }
+                },
+                rejectionReason: {
+                    type: String,
+                    default: null,
+                },
             }
         ],
     },

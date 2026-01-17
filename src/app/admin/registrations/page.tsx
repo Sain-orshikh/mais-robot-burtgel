@@ -6,6 +6,7 @@ import { ThemeToggle } from '@/app/components/shared/ThemeToggle'
 import { RegistrationsTable } from '@/app/components/admin/RegistrationsTable'
 import { RegistrationDetailsDialog } from '@/app/components/admin/RegistrationDetailsDialog'
 import { RegistrationFilters } from '@/app/components/admin/RegistrationFilters'
+import { RejectRegistrationDialog } from '@/app/components/admin/RejectRegistrationDialog'
 import { eventApi } from '@/lib/api/events'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Download, RefreshCw } from 'lucide-react'
@@ -31,6 +32,8 @@ export default function RegistrationsPage() {
   const [selectedRegistration, setSelectedRegistration] = useState<any | null>(null)
   const [selectedPayment, setSelectedPayment] = useState<any | null>(null)
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false)
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
+  const [actionLoading, setActionLoading] = useState(false)
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -156,46 +159,83 @@ export default function RegistrationsPage() {
   }
 
   const handleApprove = async (registration: any) => {
+    if (!selectedEventId) return
+
+    const registrationId = registration?._id || registration?.id
+    if (!registrationId) {
+      toast({
+        title: 'Алдаа',
+        description: 'Бүртгэлийн ID олдсонгүй',
+        variant: 'destructive'
+      })
+      return
+    }
+    
     try {
-      // TODO: Implement API call to approve registration
-      // await eventApi.updateRegistrationStatus(selectedEventId, registration._id, 'approved')
+      setActionLoading(true)
+      await eventApi.approveRegistration(selectedEventId, registrationId)
       
       toast({
         title: 'Амжилттай',
         description: 'Бүртгэлийг зөвшөөрлөө',
       })
       
+      setDetailsDialogOpen(false)
       // Refresh registrations
       await fetchRegistrations()
     } catch (error) {
       console.error('Error approving registration:', error)
       toast({
         title: 'Алдаа',
-        description: 'Бүртгэлийг зөвшөөрөхөд алдаа гарлаа',
+        description: error instanceof Error ? error.message : 'Бүртгэлийг зөвшөөрөхөд алдаа гарлаа',
         variant: 'destructive'
       })
+    } finally {
+      setActionLoading(false)
     }
   }
 
-  const handleReject = async (registration: any, reason: string) => {
+  const handleRejectClick = (registration: any) => {
+    setSelectedRegistration(registration)
+    setDetailsDialogOpen(false)
+    setRejectDialogOpen(true)
+  }
+
+  const handleRejectConfirm = async (rejectionReason: string) => {
+    if (!selectedEventId || !selectedRegistration) return
+
+    const registrationId = selectedRegistration?._id || selectedRegistration?.id
+    if (!registrationId) {
+      toast({
+        title: 'Алдаа',
+        description: 'Бүртгэлийн ID олдсонгүй',
+        variant: 'destructive'
+      })
+      return
+    }
+    
     try {
-      // TODO: Implement API call to reject registration
-      // await eventApi.updateRegistrationStatus(selectedEventId, registration._id, 'rejected', reason)
+      setActionLoading(true)
+      await eventApi.rejectRegistration(selectedEventId, registrationId, rejectionReason)
       
       toast({
         title: 'Амжилттай',
         description: 'Бүртгэлийг татгалзлаа',
       })
       
+      setRejectDialogOpen(false)
+      setSelectedRegistration(null)
       // Refresh registrations
       await fetchRegistrations()
     } catch (error) {
       console.error('Error rejecting registration:', error)
       toast({
         title: 'Алдаа',
-        description: 'Бүртгэлийг татгалзахад алдаа гарлаа',
+        description: error instanceof Error ? error.message : 'Бүртгэлийг татгалзахад алдаа гарлаа',
         variant: 'destructive'
       })
+    } finally {
+      setActionLoading(false)
     }
   }
 
@@ -384,7 +424,17 @@ export default function RegistrationsPage() {
         open={detailsDialogOpen}
         onOpenChange={setDetailsDialogOpen}
         onApprove={handleApprove}
-        onReject={(reg) => handleReject(reg, 'Шалтгаан оруулаагүй')}
+        onReject={handleRejectClick}
+      />
+      
+      <RejectRegistrationDialog
+        open={rejectDialogOpen}
+        onOpenChange={setRejectDialogOpen}
+        onConfirm={handleRejectConfirm}
+        isLoading={actionLoading}
+        organisationName={
+          selectedRegistration?.organisationId?.typeDetail || 'N/A'
+        }
       />
     </div>
   )

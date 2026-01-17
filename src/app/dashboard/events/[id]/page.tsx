@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowLeft, Users, Trophy, Calendar, MapPin, CreditCard, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, Users, Trophy, Calendar, MapPin, CreditCard, CheckCircle2, XCircle, Clock, AlertCircle, RefreshCw } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/hooks/useAuth'
 import { PaymentModal } from '@/app/components/events/PaymentModal'
@@ -67,6 +67,7 @@ export default function EventDetailPage() {
   const [contestants, setContestants] = useState<Contestant[]>([])
   const [coaches, setCoaches] = useState<Coach[]>([])
   const [myTeams, setMyTeams] = useState<Team[]>([])
+  const [myRegistrations, setMyRegistrations] = useState<any[]>([])
   const [payments, setPayments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   
@@ -109,10 +110,16 @@ export default function EventDetailPage() {
         paymentApi.getPaymentStatus(eventId).catch(() => []),
       ])
       
+      // Fetch my registrations from the event
+      const myRegs = eventData.registrations?.filter(
+        (reg: any) => reg.organisationId?._id === organisation?._id || reg.organisationId === organisation?._id
+      ) || []
+      
       setEvent(eventData)
       setContestants(contestantsData)
       setCoaches(coachesData)
       setMyTeams(teamsData)
+      setMyRegistrations(myRegs)
       setPayments(Array.isArray(paymentsData) ? paymentsData : [])
     } catch (error) {
       toast({
@@ -374,68 +381,6 @@ export default function EventDetailPage() {
         </CardContent>
       </Card>
       
-      {/* Payment Section */}
-      {myTeams.filter(t => t.status === 'active').length > 0 && (
-        <Card className='mb-8'>
-          <CardContent className='p-6'>
-            {/* Show all payments */}
-            {payments.length > 0 && (
-              <div className='space-y-3 mb-4'>
-                <h3 className='font-semibold text-gray-800'>Payment History</h3>
-                {payments.map((payment) => (
-                  <div key={payment._id} className='flex items-center justify-between p-3 bg-gray-50 rounded-lg'>
-                    <div className='flex items-center gap-3'>
-                      <CheckCircle2 className='text-green-500' size={24} />
-                      <div>
-                        <div className='font-medium text-gray-800'>
-                          {payment.teamIds.length} team(s) - {payment.amount.toLocaleString()}₮
-                        </div>
-                        <div className='text-sm text-gray-600'>
-                          Status: <span className={`font-medium ${
-                            payment.status === 'approved' ? 'text-green-600' :
-                            payment.status === 'rejected' ? 'text-red-600' :
-                            'text-yellow-600'
-                          }`}>
-                            {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <a
-                      href={payment.receiptUrl}
-                      target='_blank'
-                      rel='noopener noreferrer'
-                      className='text-blue-500 hover:underline text-sm'
-                    >
-                      View Receipt
-                    </a>
-                  </div>
-                ))}
-              </div>
-            )}
-            
-            {/* Show unpaid teams section */}
-            {myTeams.filter(t => t.status === 'active' && !(t as any).paymentId).length > 0 && (
-              <div className='flex items-center justify-between border-t pt-4'>
-                <div>
-                  <div className='font-semibold text-gray-800 mb-1'>Unpaid Teams</div>
-                  <div className='text-sm text-gray-600'>
-                    Complete payment for {myTeams.filter(t => t.status === 'active' && !(t as any).paymentId).length} unpaid team(s)
-                  </div>
-                </div>
-                <Button
-                  onClick={() => setShowPaymentModal(true)}
-                  className='bg-green-600 hover:bg-green-700'
-                >
-                  <CreditCard className='mr-2 h-4 w-4' />
-                  Pay Now
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-      
       {/* Team Registration Form */}
       {isRegistrationOpen && !showTeamForm && (
         <div className='mb-8'>
@@ -574,16 +519,70 @@ export default function EventDetailPage() {
         </Card>
       )}
 
-      {/* My Registered Teams */}
-      {myTeams.filter(t => t.status === 'active').length > 0 && (
-        <Card>
+      {/* My Registered Teams - Comprehensive View */}
+      {(myTeams.filter(t => t.status === 'active').length > 0 || myRegistrations.length > 0) && (
+        <Card className='mb-8'>
           <CardHeader>
-            <CardTitle className='flex items-center gap-2'>
-              <Users className='h-5 w-5' />
-              My Registered Teams ({myTeams.filter(t => t.status === 'active').length})
-            </CardTitle>
+            <div className='flex items-center justify-between'>
+              <CardTitle className='flex items-center gap-2'>
+                <Users className='h-5 w-5' />
+                My Registered Teams ({myTeams.filter(t => t.status === 'active').length})
+              </CardTitle>
+              {myTeams.filter(t => t.status === 'active' && !(t as any).paymentId).length > 0 && (
+                <Button
+                  onClick={() => setShowPaymentModal(true)}
+                  className='bg-green-600 hover:bg-green-700'
+                  size='sm'
+                >
+                  <CreditCard className='mr-2 h-4 w-4' />
+                  Pay Now ({myTeams.filter(t => t.status === 'active' && !(t as any).paymentId).length} team(s))
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
+            {/* Payment History Section */}
+            {payments.length > 0 && (
+              <div className='mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg'>
+                <h3 className='font-semibold text-gray-800 mb-3 flex items-center gap-2'>
+                  <CreditCard size={18} />
+                  Payment History
+                </h3>
+                <div className='space-y-2'>
+                  {payments.map((payment) => (
+                    <div key={payment._id} className='flex items-center justify-between p-3 bg-white rounded-lg border'>
+                      <div className='flex items-center gap-3'>
+                        <CheckCircle2 className='text-green-500' size={20} />
+                        <div>
+                          <div className='font-medium text-gray-800 text-sm'>
+                            {payment.teamIds.length} team(s) - {payment.amount.toLocaleString()}₮
+                          </div>
+                          <div className='text-xs text-gray-600'>
+                            Status: <span className={`font-medium ${
+                              payment.status === 'approved' ? 'text-green-600' :
+                              payment.status === 'rejected' ? 'text-red-600' :
+                              'text-yellow-600'
+                            }`}>
+                              {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <a
+                        href={payment.receiptUrl}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className='text-blue-500 hover:underline text-xs'
+                      >
+                        View Receipt
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Teams List */}
             <div className='space-y-4'>
               {myTeams.filter(t => t.status === 'active').map((team) => {
                 const category = eventCategories.find(c => c.code === team.categoryCode)
@@ -599,26 +598,111 @@ export default function EventDetailPage() {
                 
                 const isPaid = !!(team as any).paymentId
                 
+                // Find corresponding registration to show status
+                const registration = myRegistrations.find((reg: any) => {
+                  const regTeamId = reg?.teamId
+                  const teamId = team._id
+                  if (regTeamId && teamId && regTeamId.toString() === teamId.toString()) {
+                    return true
+                  }
+                  const regCategory = reg?.category
+                  const teamCategoryCode = team.categoryCode
+                  const categoryName = category?.name
+                  return regCategory === teamCategoryCode || regCategory === categoryName
+                })
+                
+                const getStatusBadge = (status?: string) => {
+                  if (!status) return null
+                  switch (status) {
+                    case 'approved':
+                      return (
+                        <span className='inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700'>
+                          <CheckCircle2 size={14} />
+                          Approved
+                        </span>
+                      )
+                    case 'rejected':
+                      return (
+                        <span className='inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700'>
+                          <XCircle size={14} />
+                          Rejected
+                        </span>
+                      )
+                    default:
+                      return (
+                        <span className='inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700'>
+                          <Clock size={14} />
+                          Pending Review
+                        </span>
+                      )
+                  }
+                }
+                
+                const getPaymentStatusBadge = (status?: string, hasPayment?: boolean) => {
+                  if (!hasPayment) {
+                    return (
+                      <span className='text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded inline-flex items-center gap-1'>
+                        <Clock size={12} />
+                        Payment Not Submitted
+                      </span>
+                    )
+                  }
+                  switch (status) {
+                    case 'approved':
+                    case 'verified':
+                      return (
+                        <span className='text-xs bg-green-100 text-green-700 px-2 py-1 rounded inline-flex items-center gap-1'>
+                          <CheckCircle2 size={12} />
+                          Payment Approved
+                        </span>
+                      )
+                    case 'rejected':
+                      return (
+                        <span className='text-xs bg-red-100 text-red-700 px-2 py-1 rounded inline-flex items-center gap-1'>
+                          <XCircle size={12} />
+                          Payment Rejected
+                        </span>
+                      )
+                    case 'pending':
+                    default:
+                      return (
+                        <span className='text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded inline-flex items-center gap-1'>
+                          <Clock size={12} />
+                          Payment Pending
+                        </span>
+                      )
+                  }
+                }
+                
                 return (
-                  <div key={team._id} className='p-4 border rounded-lg bg-white'>
+                  <div 
+                    key={team._id} 
+                    className={`p-4 border rounded-lg ${
+                      registration?.status === 'rejected' ? 'bg-red-50 border-red-200' : 
+                      registration?.status === 'approved' ? 'bg-green-50 border-green-200' : 
+                      'bg-white'
+                    }`}
+                  >
                     <div className='flex items-start justify-between mb-3'>
-                      <div>
-                        <div className='font-mono font-bold text-lg'>{team.teamId}</div>
+                      <div className='flex-1'>
+                        <div className='flex items-center gap-2 mb-1'>
+                          <div className='font-mono font-bold text-lg'>{team.teamId}</div>
+                          {registration ? getStatusBadge(registration.status) : (
+                            <span className='inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500'>
+                              Not Registered
+                            </span>
+                          )}
+                        </div>
                         <div className='text-sm text-gray-600'>{category?.name}</div>
-                        {isPaid && (
-                          <span className='text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded mt-1 inline-block'>
-                            Paid
-                          </span>
-                        )}
+                        <div className='flex items-center gap-2 mt-1'>
+                          {(() => {
+                            // Find payment for this team
+                            const teamPayment = payments.find((p) => Array.isArray(p.teamIds) && p.teamIds.includes(team._id))
+                            return getPaymentStatusBadge(teamPayment?.status, !!teamPayment)
+                          })()}
+                        </div>
                       </div>
                       <div className='flex items-center gap-2'>
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          team.status === 'active' 
-                            ? 'bg-green-100 text-green-700' 
-                            : 'bg-gray-100 text-gray-700'
-                        }`}>
-                          {team.status.charAt(0).toUpperCase() + team.status.slice(1)}
-                        </span>
                         {team.status === 'active' && !isPaid && (
                           <Button
                             size='sm'
@@ -651,6 +735,37 @@ export default function EventDetailPage() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Registration Date */}
+                    {registration && (
+                      <div className='mt-3 pt-3 border-t text-xs text-gray-600'>
+                        Registered: {new Date(registration.registeredAt).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </div>
+                    )}
+
+                    {/* Rejection Reason */}
+                    {registration?.status === 'rejected' && registration.rejectionReason && (
+                      <div className='mt-3 p-3 bg-red-100 border border-red-200 rounded-lg'>
+                        <div className='flex items-start gap-2'>
+                          <AlertCircle className='h-5 w-5 text-red-600 shrink-0 mt-0.5' />
+                          <div>
+                            <div className='font-medium text-red-800 mb-1'>Rejection Reason:</div>
+                            <div className='text-sm text-red-700'>{registration.rejectionReason}</div>
+                            <div className='mt-2'>
+                              <p className='text-xs text-red-600'>
+                                You can register again with the necessary corrections.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )
               })}

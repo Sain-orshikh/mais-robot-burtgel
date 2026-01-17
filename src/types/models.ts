@@ -79,6 +79,7 @@ export interface Event {
     maxContestantsPerTeam: number
   }[]
   registrations: {
+    _id: string
     organisationId: string
     category: string
     contestantIds: string[]
@@ -86,6 +87,7 @@ export interface Event {
     teamId: string
     registeredAt: string
     status: 'pending' | 'approved' | 'rejected'
+    rejectionReason?: string | null
   }[]
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled'
   createdAt: string

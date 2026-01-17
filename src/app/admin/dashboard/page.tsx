@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { AdminHeader } from '@/app/components/admin/AdminHeader'
 import { AdminStatsCards } from '@/app/components/admin/AdminStatsCards'
 import { RecentRegistrations } from '@/app/components/admin/RecentRegistrations'
-import { CategoryDistribution } from '@/app/components/admin/CategoryDistribution'
 import { eventApi } from '@/lib/api/events'
 import { teamApi } from '@/lib/api/teams'
 import { paymentApi } from '@/lib/api/payments'
@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast'
 
 export default function AdminDashboard() {
   const { isAuthenticated, isChecking } = useAdminAuth()
+  const router = useRouter()
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
@@ -28,7 +29,6 @@ export default function AdminDashboard() {
     paymentNotUploaded: 0
   })
   const [recentTeams, setRecentTeams] = useState<any[]>([])
-  const [categoryStats, setCategoryStats] = useState<any[]>([])
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -40,15 +40,20 @@ export default function AdminDashboard() {
     try {
       setLoading(true)
       
-      // Fetch all events with their registrations
+      // Fetch all events and then load each event with populated registrations
       const events = await eventApi.getAll()
-      
-      // Extract all registrations from all events
-      const allRegistrations = events.flatMap((event: any) => 
+
+      const populatedEvents = await Promise.all(
+        events.map((event: any) => eventApi.getById(event._id))
+      )
+
+      // Extract all registrations from all events (populated org/coach/contestants)
+      const allRegistrations = populatedEvents.flatMap((event: any) =>
         (event.registrations || []).map((reg: any) => ({
           ...reg,
           eventId: event._id,
-          eventName: event.name
+          eventName: event.name,
+          paymentStatus: reg.paymentStatus || 'not_uploaded'
         }))
       )
       
@@ -88,21 +93,6 @@ export default function AdminDashboard() {
         !teamsWithPayment.has(t._id.toString())
       ).length
       
-      // Calculate category distribution from registrations
-      const categoryCounts: { [key: string]: number } = {}
-      allRegistrations.forEach((reg: any) => {
-        const catName = reg.category || 'Unknown'
-        categoryCounts[catName] = (categoryCounts[catName] || 0) + 1
-      })
-      
-      const categoryData = Object.entries(categoryCounts).map(([name, count]) => ({
-        name,
-        count,
-        percentage: allRegistrations.length > 0 
-          ? Math.round((count / allRegistrations.length) * 100) 
-          : 0
-      }))
-      
       setStats({
         total: allRegistrations.length,
         pending: pendingPayments,
@@ -113,13 +103,11 @@ export default function AdminDashboard() {
         paymentNotUploaded: teamsWithoutPayment
       })
       
-      // Get recent registrations (last 8)
+      // Get recent registrations (last 10)
       const sortedRegs = allRegistrations
         .sort((a: any, b: any) => new Date(b.registeredAt).getTime() - new Date(a.registeredAt).getTime())
-        .slice(0, 8)
+        .slice(0, 10)
       setRecentTeams(sortedRegs)
-      
-      setCategoryStats(categoryData)
       
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
@@ -193,17 +181,12 @@ export default function AdminDashboard() {
           <AdminStatsCards stats={stats} />
         </div>
 
-        {/* Two Column Layout */}
-        <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
-          {/* Recent Registrations - Takes 2 columns */}
-          <div className='lg:col-span-2'>
-            <RecentRegistrations registrations={recentTeams} limit={8} />
-          </div>
-
-          {/* Category Distribution - Takes 1 column */}
-          <div className='lg:col-span-1'>
-            <CategoryDistribution categoryStats={categoryStats} />
-          </div>
+        <div className='grid grid-cols-1 gap-6'>
+          <RecentRegistrations
+            registrations={recentTeams}
+            limit={8}
+            onViewDetails={() => router.push('/admin/registrations')}
+          />
         </div>
       </main>
     </div>

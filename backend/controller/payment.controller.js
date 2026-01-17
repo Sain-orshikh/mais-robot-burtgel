@@ -1,5 +1,6 @@
 import Payment from "../models/payment.model.js";
 import Team from "../models/team.model.js";
+import Event from "../models/event.model.js";
 
 // Submit payment for event registration
 export const submitPayment = async (req, res) => {
@@ -38,6 +39,36 @@ export const submitPayment = async (req, res) => {
             { _id: { $in: teamIds } },
             { $set: { paymentId: payment._id } }
         );
+
+        // Create registrations for paid teams (if not already registered)
+        const event = await Event.findById(eventId);
+
+        if (event) {
+            const existingTeamIds = new Set(
+                (event.registrations || [])
+                    .map((reg) => reg.teamId)
+                    .filter(Boolean)
+                    .map((id) => id.toString())
+            );
+
+            const teamsToRegister = teams.filter((team) => !existingTeamIds.has(team._id.toString()));
+
+            if (teamsToRegister.length > 0) {
+                const newRegistrations = teamsToRegister.map((team) => ({
+                    organisationId,
+                    category: team.categoryCode || team.categoryName,
+                    contestantIds: team.contestantIds,
+                    coachId: team.coachId,
+                    teamId: team._id,
+                    status: "pending",
+                }));
+
+                await Event.updateOne(
+                    { _id: eventId },
+                    { $push: { registrations: { $each: newRegistrations } } }
+                );
+            }
+        }
 
         res.status(201).json({ message: "Payment submitted successfully", payment });
     } catch (error) {

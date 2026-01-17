@@ -1,6 +1,8 @@
 import Event from "../models/event.model.js";
 import Contestant from "../models/contestant.model.js";
 import Coach from "../models/coach.model.js";
+import Team from "../models/team.model.js";
+import Payment from "../models/payment.model.js";
 
 // Create a new event (Admin only - would need admin middleware)
 export const createEvent = async (req, res) => {
@@ -236,6 +238,126 @@ export const deleteEvent = async (req, res) => {
         res.status(200).json({ message: "Event deleted successfully" });
     } catch (error) {
         console.log("Error in deleteEvent controller", error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+// Approve a registration (Admin only)
+export const approveRegistration = async (req, res) => {
+    try {
+        const { eventId, registrationId } = req.params;
+
+        if (!registrationId) {
+            return res.status(400).json({ error: "Registration ID is required" });
+        }
+
+        const event = await Event.findOneAndUpdate(
+            { _id: eventId, "registrations._id": registrationId },
+            {
+                $set: {
+                    "registrations.$.status": "approved",
+                    "registrations.$.rejectionReason": null,
+                },
+            },
+            { new: true }
+        );
+
+        if (!event) {
+            return res.status(404).json({ error: "Event or registration not found" });
+        }
+
+        const updatedRegistration = event.registrations.id(registrationId);
+
+        res.status(200).json({ message: "Registration approved successfully", registration: updatedRegistration });
+    } catch (error) {
+        console.log("Error in approveRegistration controller", error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+// Reject a registration (Admin only)
+export const rejectRegistration = async (req, res) => {
+    try {
+        const { eventId, registrationId } = req.params;
+        const { rejectionReason } = req.body;
+
+        if (!rejectionReason || rejectionReason.trim() === '') {
+            return res.status(400).json({ error: "Rejection reason is required" });
+        }
+
+        if (!registrationId) {
+            return res.status(400).json({ error: "Registration ID is required" });
+        }
+
+        const event = await Event.findOneAndUpdate(
+            { _id: eventId, "registrations._id": registrationId },
+            {
+                $set: {
+                    "registrations.$.status": "rejected",
+                    "registrations.$.rejectionReason": rejectionReason,
+                },
+            },
+            { new: true }
+        );
+
+        if (!event) {
+            return res.status(404).json({ error: "Event or registration not found" });
+        }
+
+        const updatedRegistration = event.registrations.id(registrationId);
+
+        // Reset payment status for teams related to this registration (org + event + category)
+        const regCategory = updatedRegistration?.category;
+        const organisationId = updatedRegistration?.organisationId;
+
+        if (regCategory && organisationId) {
+            const teamsToReset = await Team.find({
+                eventId,
+                organisationId,
+                $or: [
+                    { categoryCode: regCategory },
+                    { categoryName: regCategory },
+                ],
+            }).select("_id paymentId");
+
+            const teamIdsToReset = teamsToReset.map((t) => t._id);
+
+            if (teamIdsToReset.length > 0) {
+                // Unlink payment from teams
+                await Team.updateMany(
+                    { _id: { $in: teamIdsToReset } },
+                    { $set: { paymentId: null } }
+                );
+
+                // Remove teamIds from payments; delete empty payments
+                const payments = await Payment.find({
+                    organisationId,
+                    eventId,
+                    teamIds: { $in: teamIdsToReset },
+                }).select("_id teamIds");
+
+                await Promise.all(
+                    payments.map(async (payment) => {
+                        const remainingTeamIds = payment.teamIds.filter(
+                            (teamId) => !teamIdsToReset.some((t) => t.toString() === teamId.toString())
+                        );
+
+                        if (remainingTeamIds.length === 0) {
+                            await Payment.deleteOne({ _id: payment._id });
+                        } else {
+                            await Payment.updateOne(
+                                { _id: payment._id },
+                                { $set: { teamIds: remainingTeamIds } }
+                            );
+                        }
+                    })
+                );
+            }
+        }
+
+        res.status(200).json({ message: "Registration rejected successfully", registration: updatedRegistration });
+    } catch (error) {
+        console.log("Error in rejectRegistration controller", error.message);
         res.status(500).json({ error: "Internal server error" });
     }
 };

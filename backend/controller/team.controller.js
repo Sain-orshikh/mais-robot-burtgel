@@ -109,22 +109,6 @@ export const createTeam = async (req, res) => {
             { $push: { participations: { eventId, category: categoryCode } } }
         );
 
-        // Add team to event registrations
-        await Event.findByIdAndUpdate(
-            eventId,
-            { 
-                $push: { 
-                    registrations: {
-                        organisationId,
-                        category: categoryCode,
-                        contestantIds,
-                        coachId,
-                        teamId: team._id
-                    }
-                } 
-            }
-        );
-
         const populatedTeam = await Team.findById(team._id)
             .populate('contestantIds', 'contestantId ner ovog email')
             .populate('coachId', 'coachId ner ovog email')
