@@ -1,7 +1,9 @@
 import Organisation from "../models/organisation.model.js";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { generateTokenAndSetCookie } from "../utils/generateToken.js";
 import { getNextOrganisationId } from "../utils/generateOrgId.js";
+import { sendEmail } from "../utils/sendEmail.js";
 
 export const register = async (req, res) => {
     try {
@@ -224,3 +226,86 @@ export const updateOrganisation = async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 };
+
+export const forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ error: "Email is required" });
+        }
+
+        const organisation = await Organisation.findOne({ email });
+
+        if (!organisation) {
+            return res.status(200).json({ message: "If that email exists, a reset code was sent." });
+        }
+
+                const otp = Math.floor(1000 + Math.random() * 9000).toString();
+        const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
+
+        organisation.resetPasswordOTP = otpHash;
+                organisation.resetPasswordOTPExpire = new Date(Date.now() + 5 * 60 * 1000); // 5 min
+
+        await organisation.save();
+
+        const subject = "Password Reset Code";
+        const html = `
+          <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+            <h2>Password Reset Code</h2>
+            <p>Your OTP code is:</p>
+            <h3 style="letter-spacing: 2px;">${otp}</h3>
+                        <p>This code expires in 5 minutes.</p>
+            <p>If you did not request this, please ignore this email.</p>
+          </div>
+        `;
+
+        await sendEmail({ to: email, subject, html, text: `OTP: ${otp}` });
+
+        return res.status(200).json({ message: "If that email exists, a reset code was sent." });
+    } catch (error) {
+        console.log("Error in forgotPassword controller", error.message);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export const resetPasswordWithOTP = async (req, res) => {
+    try {
+        const { email, otp, newPassword } = req.body;
+
+        if (!email || !otp || !newPassword) {
+            return res.status(400).json({ error: "Email, OTP, and new password are required" });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({ error: "Password must be at least 6 characters" });
+        }
+
+        const otpHash = crypto.createHash("sha256").update(String(otp)).digest("hex");
+
+        const organisation = await Organisation.findOne({
+            email,
+            resetPasswordOTP: otpHash,
+            resetPasswordOTPExpire: { $gt: new Date() },
+        });
+
+        if (!organisation) {
+            return res.status(400).json({ error: "Invalid or expired OTP" });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        organisation.password = await bcrypt.hash(newPassword, salt);
+        organisation.resetPasswordOTP = undefined;
+        organisation.resetPasswordOTPExpire = undefined;
+        organisation.resetPasswordToken = undefined;
+        organisation.resetPasswordExpire = undefined;
+
+        await organisation.save();
+
+        return res.status(200).json({ message: "Password reset successfully" });
+    } catch (error) {
+        console.log("Error in resetPasswordWithOTP controller", error.message);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+};
+

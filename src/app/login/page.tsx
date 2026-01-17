@@ -50,7 +50,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className='min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-400 to-blue-500 px-4'>
+    <div className='min-h-screen flex items-center justify-center bg-linear-to-br from-blue-400 to-blue-500 px-4'>
       <Card className='w-full max-w-md'>
         <CardHeader className='space-y-4 pb-4'>
           <div className='flex justify-center'>
@@ -98,6 +98,12 @@ export default function LoginPage() {
             >
               {isLoading ? 'Logging in...' : 'Login'}
             </Button>
+
+            <div className='text-center text-sm text-gray-600'>
+              <Link href='/forgot-password' className='text-blue-600 hover:text-blue-700 font-medium'>
+                Forgot password?
+              </Link>
+            </div>
 
             <div className='text-center text-sm text-gray-600 mt-4'>
               Doesn&apos;t have an account?{' '}
