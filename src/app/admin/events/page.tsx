@@ -70,25 +70,23 @@ export default function AdminEventsPage() {
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
   const [saving, setSaving] = useState(false)
 
-  // Helper to convert date to UB time (GMT+8)
-  const toUBDateTime = (dateStr: string) => {
+  // Helper to convert stored date to local date/time parts (no manual timezone offset)
+  const toLocalDateTime = (dateStr: string) => {
     const date = new Date(dateStr)
-    // Add 8 hours for UB timezone
-    const ubDate = new Date(date.getTime() + (8 * 60 * 60 * 1000))
-    const hours = ubDate.getUTCHours()
-    const minutes = ubDate.getUTCMinutes()
+    const hours = date.getHours()
+    const minutes = date.getMinutes()
     const isPM = hours >= 12
     const displayHours = hours % 12 || 12
-    
+
     return {
-      date: ubDate.toISOString().split('T')[0],
+      date: date.toISOString().split('T')[0],
       time: `${String(displayHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`,
       ampm: isPM ? 'PM' : 'AM'
     }
   }
 
-  // Helper to convert UB time to UTC ISO string
-  const toUTCISO = (date: string, time: string, ampm: string) => {
+  // Helper to convert local date/time to ISO string (no manual GMT+8 adjustment)
+  const toLocalISO = (date: string, time: string, ampm: string) => {
     if (!date || !time) {
       throw new Error('Date and time are required')
     }
@@ -112,15 +110,13 @@ export default function AdminEventsPage() {
       if (ampm === 'AM' && inputHours === 12) hour24 = 0
     }
     
-    // Create date in UB time
-    const ubDate = new Date(`${date}T${String(hour24).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`)
-    if (isNaN(ubDate.getTime())) {
+    const [year, month, day] = date.split('-').map(Number)
+    const localDate = new Date(year, (month || 1) - 1, day || 1, hour24, minutes, 0)
+    if (isNaN(localDate.getTime())) {
       throw new Error('Invalid date or time value')
     }
-    
-    // Subtract 8 hours to convert to UTC
-    const utcDate = new Date(ubDate.getTime() - (8 * 60 * 60 * 1000))
-    return utcDate.toISOString()
+
+    return localDate.toISOString()
   }
 
   // Helper to compute event status based on dates
@@ -217,10 +213,10 @@ export default function AdminEventsPage() {
       return matchingCat?.code || ''
     }).filter(Boolean)
     
-    const startDateTime = toUBDateTime(event.startDate)
-    const endDateTime = toUBDateTime(event.endDate)
-    const regStartDateTime = toUBDateTime(event.registrationStart)
-    const regEndDateTime = toUBDateTime(event.registrationEnd)
+    const startDateTime = toLocalDateTime(event.startDate)
+    const endDateTime = toLocalDateTime(event.endDate)
+    const regStartDateTime = toLocalDateTime(event.registrationStart)
+    const regEndDateTime = toLocalDateTime(event.registrationEnd)
     
     setFormData({
       name: event.name,
@@ -297,10 +293,10 @@ export default function AdminEventsPage() {
       const submitData = {
         name: formData.name,
         description: formData.description,
-        startDate: toUTCISO(formData.startDate, formData.startTime, formData.startAMPM),
-        endDate: toUTCISO(formData.endDate, formData.endTime, formData.endAMPM),
-        registrationStart: toUTCISO(formData.registrationStartDate, formData.registrationStartTime, formData.registrationStartAMPM),
-        registrationEnd: toUTCISO(formData.registrationEndDate, formData.registrationEndTime, formData.registrationEndAMPM),
+        startDate: toLocalISO(formData.startDate, formData.startTime, formData.startAMPM),
+        endDate: toLocalISO(formData.endDate, formData.endTime, formData.endAMPM),
+        registrationStart: toLocalISO(formData.registrationStartDate, formData.registrationStartTime, formData.registrationStartAMPM),
+        registrationEnd: toLocalISO(formData.registrationEndDate, formData.registrationEndTime, formData.registrationEndAMPM),
         location: formData.location,
         categories,
       }
@@ -604,7 +600,7 @@ export default function AdminEventsPage() {
 
               {/* Event Dates */}
               <div className='grid gap-4 p-4 border rounded-lg bg-gray-50'>
-                <h3 className='font-semibold text-sm'>Event Dates (Ulaanbaatar Time GMT+8)</h3>
+                <h3 className='font-semibold text-sm'>Event Dates (Local Time)</h3>
                 
                 <div className='grid grid-cols-2 gap-4'>
                   <div className='grid gap-2'>
