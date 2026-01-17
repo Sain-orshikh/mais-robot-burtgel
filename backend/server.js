@@ -56,7 +56,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+app.options('/*', cors(corsOptions));
 
 app.use(express.json({limit: "5mb"})); // to parse req.body
 app.use(express.urlencoded({ extended: true })); // to parse form data
