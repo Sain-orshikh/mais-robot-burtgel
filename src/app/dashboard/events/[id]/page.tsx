@@ -636,21 +636,30 @@ export default function EventDetailPage() {
                 // Find corresponding registration to show status
                 const registration = myRegistrations.find((reg: any) => {
                   const teamId = team._id
-                  const regTeamIds = Array.isArray(reg?.teamIds) ? reg.teamIds : []
+                  const regTeamIds = Array.isArray(reg?.teamIds)
+                    ? reg.teamIds
+                        .map((id: any) => (typeof id === 'object' && id?._id ? id._id : id))
+                        .filter(Boolean)
+                    : []
 
                   if (teamId && regTeamIds.some((id: any) => id.toString() === teamId.toString())) {
                     return true
                   }
 
-                  const regTeamId = reg?.teamId
+                  const regTeamId = reg?.teamId && typeof reg.teamId === 'object' ? reg.teamId._id : reg?.teamId
                   if (regTeamId && teamId && regTeamId.toString() === teamId.toString()) {
                     return true
                   }
 
-                  const regCategory = reg?.category
                   const teamCategoryCode = team.categoryCode
                   const categoryName = category?.name
-                  return regCategory === teamCategoryCode || regCategory === categoryName
+                  const regCategory = reg?.category
+                  if (regCategory && (regCategory === teamCategoryCode || regCategory === categoryName)) {
+                    return true
+                  }
+
+                  const regCategories = Array.isArray(reg?.categories) ? reg.categories : []
+                  return regCategories.includes(teamCategoryCode) || (categoryName ? regCategories.includes(categoryName) : false)
                 })
                 
                 const getStatusBadge = (status?: string) => {
