@@ -79,7 +79,7 @@ export const AdminStatsCards = ({ stats }: AdminStatsCardsProps) => {
       icon: <CheckCircle size={48} />,
       color: 'text-green-700 dark:text-success',
       bgColor: 'bg-green-100 dark:bg-success/10',
-      href: '/admin/registrations?status=approved'
+      href: '/admin/registrations'
     },
     {
       title: 'Хүлээгдэж буй',
@@ -88,7 +88,7 @@ export const AdminStatsCards = ({ stats }: AdminStatsCardsProps) => {
       icon: <Clock size={48} />,
       color: 'text-orange-700 dark:text-warning',
       bgColor: 'bg-orange-100 dark:bg-warning/10',
-      href: '/admin/registrations?status=pending'
+      href: '/admin/registrations'
     },
     {
       title: 'Татгалзсан',
@@ -97,7 +97,7 @@ export const AdminStatsCards = ({ stats }: AdminStatsCardsProps) => {
       icon: <XCircle size={48} />,
       color: 'text-red-700 dark:text-error',
       bgColor: 'bg-red-100 dark:bg-error/10',
-      href: '/admin/registrations?status=rejected'
+      href: '/admin/registrations'
     },
     {
       title: 'Төлбөр баталгаажсан',
@@ -106,7 +106,7 @@ export const AdminStatsCards = ({ stats }: AdminStatsCardsProps) => {
       icon: <FileCheck size={48} />,
       color: 'text-cyan-700 dark:text-info',
       bgColor: 'bg-cyan-100 dark:bg-info/10',
-      href: '/admin/registrations?paymentStatus=verified'
+      href: '/admin/registrations'
     },
     {
       title: 'Төлбөр хүлээгдэж буй',
@@ -115,7 +115,7 @@ export const AdminStatsCards = ({ stats }: AdminStatsCardsProps) => {
       icon: <Receipt size={48} />,
       color: 'text-purple-700 dark:text-secondary',
       bgColor: 'bg-purple-100 dark:bg-secondary/10',
-      href: '/admin/registrations?paymentStatus=uploaded'
+      href: '/admin/registrations'
     },
     {
       title: 'Төлбөр оруулаагүй',
@@ -124,7 +124,7 @@ export const AdminStatsCards = ({ stats }: AdminStatsCardsProps) => {
       icon: <AlertCircle size={48} />,
       color: 'text-gray-700 dark:text-muted-foreground',
       bgColor: 'bg-gray-200 dark:bg-muted',
-      href: '/admin/registrations?paymentStatus=not_uploaded'
+      href: '/admin/registrations'
     },
   ]
 

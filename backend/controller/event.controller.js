@@ -48,7 +48,7 @@ export const getEventById = async (req, res) => {
         const { id } = req.params;
 
         const event = await Event.findById(id)
-            .populate('registrations.organisationId', 'organisationId typeDetail')
+            .populate('registrations.organisationId', 'organisationId typeDetail type aimag _id ner ovog phoneNumber email')
             .populate('registrations.contestantIds', 'ner ovog')
             .populate('registrations.coachId', 'ner ovog');
 

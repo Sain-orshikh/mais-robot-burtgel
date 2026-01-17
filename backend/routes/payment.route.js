@@ -14,8 +14,8 @@ const router = express.Router();
 router.post("/", protectOrganisationRoute, submitPayment);
 router.get("/event/:eventId", protectOrganisationRoute, getPaymentStatus);
 
-// Admin routes
-router.get("/admin/all", protectRoute, getAllPayments);
-router.put("/admin/:id", protectRoute, updatePaymentStatus);
+// Admin routes (no auth middleware - admin pages are protected client-side)
+router.get("/admin/all", getAllPayments);
+router.put("/admin/:id", updatePaymentStatus);
 
 export default router;

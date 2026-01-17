@@ -1,17 +1,137 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { AdminHeader } from '@/app/components/admin/AdminHeader'
 import { AdminStatsCards } from '@/app/components/admin/AdminStatsCards'
 import { RecentRegistrations } from '@/app/components/admin/RecentRegistrations'
 import { CategoryDistribution } from '@/app/components/admin/CategoryDistribution'
-import { mockRegistrations, getRegistrationStats, getCategoryStats } from '@/data/mockRegistrations'
+import { eventApi } from '@/lib/api/events'
+import { teamApi } from '@/lib/api/teams'
+import { paymentApi } from '@/lib/api/payments'
 import { Button } from '@/components/ui/button'
 import { Users, BarChart3, Calendar } from 'lucide-react'
 import Link from 'next/link'
+import { useToast } from '@/hooks/use-toast'
 
 export default function AdminDashboard() {
   const { isAuthenticated, isChecking } = useAdminAuth()
+  const { toast } = useToast()
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({
+    total: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+    paymentVerified: 0,
+    paymentUploaded: 0,
+    paymentNotUploaded: 0
+  })
+  const [recentTeams, setRecentTeams] = useState<any[]>([])
+  const [categoryStats, setCategoryStats] = useState<any[]>([])
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchDashboardData()
+    }
+  }, [isAuthenticated])
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true)
+      
+      // Fetch all events with their registrations
+      const events = await eventApi.getAll()
+      
+      // Extract all registrations from all events
+      const allRegistrations = events.flatMap((event: any) => 
+        (event.registrations || []).map((reg: any) => ({
+          ...reg,
+          eventId: event._id,
+          eventName: event.name
+        }))
+      )
+      
+      // Fetch all teams to get actual team data
+      const teamPromises = events.map(event => 
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/teams/event/${event._id}`, {
+          credentials: 'include'
+        }).then(res => res.ok ? res.json() : []).catch(() => [])
+      )
+      
+      const teamsArrays = await Promise.all(teamPromises)
+      const allTeams = teamsArrays.flat()
+      
+      // Calculate stats
+      const totalTeams = allTeams.length
+      const activeTeams = allTeams.filter((t: any) => t.status === 'active')
+      const deletedTeams = allTeams.filter((t: any) => t.status === 'deleted')
+      
+      // Get all payments
+      const paymentResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/payments/admin/all`, {
+        credentials: 'include'
+      })
+      const allPayments = paymentResponse.ok ? await paymentResponse.json() : []
+      
+      // Calculate payment stats
+      const verifiedPayments = allPayments.filter((p: any) => p.status === 'verified').length
+      const pendingPayments = allPayments.filter((p: any) => p.status === 'pending').length
+      
+      // Count teams without payment (teams that don't have a teamId in any payment)
+      const teamsWithPayment = new Set()
+      allPayments.forEach((payment: any) => {
+        payment.teamIds?.forEach((teamId: any) => {
+          teamsWithPayment.add(teamId.toString())
+        })
+      })
+      const teamsWithoutPayment = activeTeams.filter((t: any) => 
+        !teamsWithPayment.has(t._id.toString())
+      ).length
+      
+      // Calculate category distribution from registrations
+      const categoryCounts: { [key: string]: number } = {}
+      allRegistrations.forEach((reg: any) => {
+        const catName = reg.category || 'Unknown'
+        categoryCounts[catName] = (categoryCounts[catName] || 0) + 1
+      })
+      
+      const categoryData = Object.entries(categoryCounts).map(([name, count]) => ({
+        name,
+        count,
+        percentage: allRegistrations.length > 0 
+          ? Math.round((count / allRegistrations.length) * 100) 
+          : 0
+      }))
+      
+      setStats({
+        total: allRegistrations.length,
+        pending: pendingPayments,
+        approved: activeTeams.length,
+        rejected: deletedTeams.length,
+        paymentVerified: verifiedPayments,
+        paymentUploaded: pendingPayments,
+        paymentNotUploaded: teamsWithoutPayment
+      })
+      
+      // Get recent registrations (last 8)
+      const sortedRegs = allRegistrations
+        .sort((a: any, b: any) => new Date(b.registeredAt).getTime() - new Date(a.registeredAt).getTime())
+        .slice(0, 8)
+      setRecentTeams(sortedRegs)
+      
+      setCategoryStats(categoryData)
+      
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to load dashboard data',
+        variant: 'destructive'
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Show loading state while checking authentication
   if (isChecking || !isAuthenticated) {
@@ -25,8 +145,19 @@ export default function AdminDashboard() {
     )
   }
 
-  const stats = getRegistrationStats()
-  const categoryStats = getCategoryStats()
+  if (loading) {
+    return (
+      <div className='min-h-screen bg-background'>
+        <AdminHeader />
+        <div className='container mx-auto px-6 py-8 flex items-center justify-center h-96'>
+          <div className='text-center'>
+            <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto'></div>
+            <p className='mt-4 text-muted-foreground'>Мэдээлэл ачааллаж байна...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className='min-h-screen bg-background'>
@@ -66,7 +197,7 @@ export default function AdminDashboard() {
         <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
           {/* Recent Registrations - Takes 2 columns */}
           <div className='lg:col-span-2'>
-            <RecentRegistrations registrations={mockRegistrations} limit={8} />
+            <RecentRegistrations registrations={recentTeams} limit={8} />
           </div>
 
           {/* Category Distribution - Takes 1 column */}
