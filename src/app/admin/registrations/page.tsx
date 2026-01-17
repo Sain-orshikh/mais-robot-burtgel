@@ -90,6 +90,32 @@ export default function RegistrationsPage() {
       const paymentStatusMap = new Map(
         payments.map((p: any) => [String(p._id), p.status])
       )
+
+      const getOrgIdString = (orgId: any): string => {
+        if (!orgId) return 'N/A'
+        if (typeof orgId === 'string') return orgId
+        return orgId.organisationId || orgId._id || String(orgId)
+      }
+
+      const paymentsForEvent = payments.filter((p: any) => String(p.eventId?._id || p.eventId) === String(event._id))
+      const paymentsByOrg = new Map<string, any[]>()
+
+      paymentsForEvent.forEach((payment: any) => {
+        const orgKey = getOrgIdString(payment.organisationId)
+        const current = paymentsByOrg.get(orgKey) || []
+        current.push(payment)
+        paymentsByOrg.set(orgKey, current)
+      })
+
+      const paymentDescriptionMap = new Map<string, string>()
+      paymentsByOrg.forEach((orgPayments, orgKey) => {
+        orgPayments
+          .sort((a, b) => new Date(a.submittedAt || a.createdAt || 0).getTime() - new Date(b.submittedAt || b.createdAt || 0).getTime())
+          .forEach((payment: any, index: number) => {
+            const paymentNumber = String(index + 1).padStart(3, '0')
+            paymentDescriptionMap.set(String(payment._id), `${orgKey}-${paymentNumber}`)
+          })
+      })
       
       // Extract registrations from the event
       // The organisationId should be populated by the backend
@@ -105,7 +131,10 @@ export default function RegistrationsPage() {
         // Payment status from payment record if linked
         paymentStatus: reg.paymentId
           ? (paymentStatusMap.get(String(reg.paymentId)) || 'not_uploaded')
-          : 'not_uploaded'
+          : 'not_uploaded',
+        paymentDescription: reg.paymentId
+          ? (paymentDescriptionMap.get(String(reg.paymentId)) || 'N/A')
+          : 'N/A'
       }))
       
       setRegistrations(regs)
@@ -244,7 +273,7 @@ export default function RegistrationsPage() {
     }
 
     // CSV header
-    const headers = ['Org ID', 'Байгууллага', 'Төрөл', 'Аймаг', 'Категори', 'Огноо', 'Төлбөр', 'Төлөв']
+    const headers = ['Org ID', 'Байгууллага', 'Төрөл', 'Аймаг', 'Категори', 'Гүйлгээний утга', 'Огноо', 'Төлбөр', 'Төлөв']
     
     // CSV rows
     const rows = filteredRegistrations.map(reg => {
@@ -269,6 +298,7 @@ export default function RegistrationsPage() {
         orgType,
         aimag,
         reg.categoryDisplay || reg.category || '',
+        reg.paymentDescription || '',
         reg.registeredAt || '',
         reg.paymentStatus || 'not_uploaded',
         reg.status || 'pending'
@@ -326,34 +356,41 @@ export default function RegistrationsPage() {
   return (
     <div className='min-h-screen bg-background'>
       {/* Header */}
-      <div className='border-b bg-card'>
-        <div className='container mx-auto px-4 py-4'>
-          <div className='flex items-center justify-between'>
-            <div className='flex items-center gap-4'>
-              <Link href='/admin/dashboard'>
-                <Button variant='ghost' size='sm'>
-                  <ArrowLeft size={20} className='mr-2' />
-                  Буцах
-                </Button>
-              </Link>
-              <div>
-                <h1 className='text-2xl font-bold'>Бүртгэлүүд</h1>
-                <p className='text-sm text-muted-foreground'>
-                  Админ: {getAdminUsername()}
-                </p>
-              </div>
-            </div>
-            <div className='flex items-center gap-2'>
-              <Button variant='outline' size='sm' onClick={fetchRegistrations} disabled={loading}>
-                <RefreshCw size={16} className={`mr-2 ${loading ? 'animate-spin' : ''}`} />
-                Шинэчлэх
+      <div className='container mx-auto px-4 py-4'>
+        <div className='flex items-center justify-between'>
+          <div className='flex items-center gap-4'>
+            <Link href='/admin/dashboard'>
+              <Button variant='ghost' size='sm'>
+                <ArrowLeft size={20} className='mr-2' />
+                Буцах
               </Button>
-              <Button variant='outline' size='sm' onClick={exportToCSV}>
-                <Download size={16} className='mr-2' />
-                CSV татах
-              </Button>
-              <ThemeToggle />
+            </Link>
+            <div>
+              <h1 className='text-2xl font-bold'>Бүртгэлүүд</h1>
+              <p className='text-sm text-muted-foreground'>
+                Админ: {getAdminUsername()}
+              </p>
             </div>
+          </div>
+          <div className='flex items-center gap-2'>
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={fetchRegistrations}
+              disabled={loading}
+            >
+              <RefreshCw size={16} className='mr-2' />
+              Дахин ачаалах
+            </Button>
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={exportToCSV}
+              disabled={filteredRegistrations.length === 0}
+            >
+              <Download size={16} className='mr-2' />
+              CSV экспорт
+            </Button>
           </div>
         </div>
       </div>

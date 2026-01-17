@@ -109,7 +109,7 @@ export const registerTeam = async (req, res) => {
 
         // Check if org has reached max teams for this category
         const existingTeams = event.registrations.filter(
-            reg => reg.organisationId.toString() === organisationId.toString() && reg.category === category
+            reg => reg.organisationId.toString() === organisationId.toString() && reg.category === category && reg.status !== 'rejected'
         );
 
         if (existingTeams.length >= eventCategory.maxTeamsPerOrg) {

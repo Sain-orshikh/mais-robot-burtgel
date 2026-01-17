@@ -19,6 +19,23 @@ export const submitPayment = async (req, res) => {
             return res.status(400).json({ error: "Invalid teams" });
         }
 
+        // Block resubmission for rejected registrations (must create new teams)
+        const rejectedRegistration = await Event.findOne({
+            _id: eventId,
+            registrations: {
+                $elemMatch: {
+                    status: "rejected",
+                    teamIds: { $in: teamIds },
+                },
+            },
+        }).select("_id");
+
+        if (rejectedRegistration) {
+            return res.status(409).json({
+                error: "This registration was rejected. Please create new teams and submit again. If you already paid, request a refund.",
+            });
+        }
+
         // Check if any of these teams are already paid for
         const alreadyPaidTeams = teams.filter(team => team.paymentId);
         if (alreadyPaidTeams.length > 0) {
@@ -72,8 +89,8 @@ export const submitPayment = async (req, res) => {
             const existingGrouped = await Event.findOne({
                 _id: eventId,
                 $or: [
-                    { "registrations.paymentId": payment._id },
-                    { "registrations.teamIds": { $in: teamIds } },
+                    { registrations: { $elemMatch: { paymentId: payment._id, status: { $ne: "rejected" } } } },
+                    { registrations: { $elemMatch: { teamIds: { $in: teamIds }, status: { $ne: "rejected" } } } },
                 ],
             }).select("_id");
 

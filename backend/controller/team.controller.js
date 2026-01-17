@@ -46,11 +46,18 @@ export const createTeam = async (req, res) => {
         }
 
         // Check if org has reached max teams for this category in this event
+        const rejectedRegs = await Event.findOne({ _id: eventId }).select('registrations');
+        const rejectedTeamIds = (rejectedRegs?.registrations || [])
+            .filter((reg) => reg.organisationId?.toString() === organisationId.toString() && reg.status === 'rejected')
+            .flatMap((reg) => Array.isArray(reg.teamIds) ? reg.teamIds : [])
+            .map((id) => id.toString());
+
         const existingTeams = await Team.countDocuments({
             organisationId,
             eventId,
             categoryCode,
-            status: 'active'
+            status: 'active',
+            _id: rejectedTeamIds.length > 0 ? { $nin: rejectedTeamIds } : { $exists: true },
         });
 
         if (existingTeams >= categoryConfig.maxTeamsPerOrg) {

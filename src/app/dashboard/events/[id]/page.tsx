@@ -101,16 +101,28 @@ export default function EventDetailPage() {
   const lockedContestants = useMemo(() => {
     if (!selectedCategory) return new Set<string>()
 
+    const rejectedTeamIds = new Set(
+      (myRegistrations || [])
+        .filter((reg: any) => reg?.status === 'rejected')
+        .flatMap((reg: any) => {
+          const teamIds = Array.isArray(reg?.teamIds) ? reg.teamIds : []
+          const mappedTeamIds = teamIds.map((id: any) => (typeof id === 'object' && id?._id ? id._id : id))
+          const singleTeamId = reg?.teamId && typeof reg.teamId === 'object' ? reg.teamId._id : reg?.teamId
+          return [...mappedTeamIds, singleTeamId].filter(Boolean)
+        })
+        .map((id: any) => id.toString())
+    )
+
     return new Set(
       myTeams
-        .filter(t => t.status === 'active' && t.categoryCode === selectedCategory)
+        .filter(t => t.status === 'active' && t.categoryCode === selectedCategory && !rejectedTeamIds.has(t._id.toString()))
         .flatMap(t => Array.isArray(t.contestantIds)
           ? t.contestantIds.map((c: any) => typeof c === 'object' ? c._id : c)
           : [])
         .filter(Boolean)
         .map((id: any) => id.toString())
     )
-  }, [myTeams, selectedCategory])
+  }, [myTeams, myRegistrations, selectedCategory])
 
   useEffect(() => {
     fetchData()
@@ -634,7 +646,7 @@ export default function EventDetailPage() {
                 const isPaid = !!(team as any).paymentId
                 
                 // Find corresponding registration to show status
-                const registration = myRegistrations.find((reg: any) => {
+                const matchingRegistrations = myRegistrations.filter((reg: any) => {
                   const teamId = team._id
                   const regTeamIds = Array.isArray(reg?.teamIds)
                     ? reg.teamIds
@@ -661,6 +673,20 @@ export default function EventDetailPage() {
                   const regCategories = Array.isArray(reg?.categories) ? reg.categories : []
                   return regCategories.includes(teamCategoryCode) || (categoryName ? regCategories.includes(categoryName) : false)
                 })
+
+                const registration = matchingRegistrations
+                  .sort((a: any, b: any) => {
+                    const statusRank = (status?: string) => {
+                      if (status === 'approved') return 2
+                      if (status === 'pending') return 1
+                      return 0
+                    }
+                    const statusDiff = statusRank(b?.status) - statusRank(a?.status)
+                    if (statusDiff !== 0) return statusDiff
+                    const aTime = new Date(a?.registeredAt || 0).getTime()
+                    const bTime = new Date(b?.registeredAt || 0).getTime()
+                    return bTime - aTime
+                  })[0]
                 
                 const getStatusBadge = (status?: string) => {
                   if (!status) return null
@@ -810,9 +836,12 @@ export default function EventDetailPage() {
                             <div className='font-medium text-red-800 mb-1'>Rejection Reason:</div>
                             <div className='text-sm text-red-700'>{registration.rejectionReason}</div>
                             <div className='mt-2'>
-                              <p className='text-xs text-red-600'>
-                                You can register again with the necessary corrections. Please issue a refund request to our email if you have already made a payment.
-                              </p>
+                <p className='text-xs text-red-600'>
+                  Please create new teams and submit again. Rejected registrations don’t allow resubmission.
+                </p>
+                <p className='text-xs text-red-600 mt-1'>
+                  If you already paid and the registration wasn’t accepted, request a refund via email or contact Shine‑Od Ganbold.
+                </p>
                             </div>
                           </div>
                         </div>

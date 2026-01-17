@@ -92,6 +92,7 @@ export const RegistrationsTable = ({ registrations, onViewDetails }: Registratio
             <TableHead className='w-[100px]'>Төрөл</TableHead>
             <TableHead className='w-[120px]'>Аймаг</TableHead>
             <TableHead className='w-[200px]'>Категори</TableHead>
+            <TableHead className='w-[160px]'>Гүйлгээний утга</TableHead>
             <TableHead className='w-[120px]'>Огноо</TableHead>
             <TableHead className='w-[120px]'>Төлбөр</TableHead>
             <TableHead className='w-[120px]'>Төлөв</TableHead>
@@ -101,7 +102,7 @@ export const RegistrationsTable = ({ registrations, onViewDetails }: Registratio
         <TableBody>
           {registrations.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={9} className='text-center py-8 text-muted-foreground'>
+              <TableCell colSpan={10} className='text-center py-8 text-muted-foreground'>
                 Бүртгэл олдсонгүй
               </TableCell>
             </TableRow>
@@ -122,6 +123,9 @@ export const RegistrationsTable = ({ registrations, onViewDetails }: Registratio
                 </TableCell>
                 <TableCell className='text-sm max-w-[200px] truncate'>
                   {reg.categoryDisplay || reg.category || 'N/A'}
+                </TableCell>
+                <TableCell className='text-sm max-w-[160px] truncate'>
+                  {reg.paymentDescription || 'N/A'}
                 </TableCell>
                 <TableCell className='text-sm'>
                   {reg.registeredAt ? format(new Date(reg.registeredAt), 'MM/dd HH:mm') : 'N/A'}
