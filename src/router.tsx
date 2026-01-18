@@ -17,6 +17,7 @@ import DashboardEventsPage from '@/app/dashboard/events/page'
 import EventDetailPage from '@/app/dashboard/events/[id]/page'
 import DashboardTeamContestantPage from '@/app/dashboard/team-members/contestant/page'
 import DashboardTeamCoachPage from '@/app/dashboard/team-members/coach/page'
+import DashboardLayout from '@/app/dashboard/layout'
 
 // Admin pages
 import AdminDashboardPage from '@/app/admin/dashboard/page'
@@ -24,6 +25,7 @@ import AdminEventsPage from '@/app/admin/events/page'
 import AdminRegistrationsPage from '@/app/admin/registrations/page'
 import AdminAnalyticsPage from '@/app/admin/analytics/page'
 import AdminAuditLogPage from '@/app/admin/audit-log/page'
+import AdminLayout from '@/app/admin/layout'
 
 // Protected route wrapper
 function ProtectedRoute({ children, requireAdmin = false }: { children: React.ReactNode; requireAdmin?: boolean }) {
@@ -50,12 +52,14 @@ export function AppRoutes() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/admin/login" element={<AdminLoginPage />} />
 
-      {/* Dashboard routes */}
+      {/* Dashboard routes with layout */}
       <Route
         path="/dashboard"
         element={
           <ProtectedRoute>
-            <DashboardPage />
+            <DashboardLayout>
+              <DashboardPage />
+            </DashboardLayout>
           </ProtectedRoute>
         }
       />
@@ -63,7 +67,9 @@ export function AppRoutes() {
         path="/dashboard/profile"
         element={
           <ProtectedRoute>
-            <DashboardProfilePage />
+            <DashboardLayout>
+              <DashboardProfilePage />
+            </DashboardLayout>
           </ProtectedRoute>
         }
       />
@@ -71,7 +77,9 @@ export function AppRoutes() {
         path="/dashboard/events"
         element={
           <ProtectedRoute>
-            <DashboardEventsPage />
+            <DashboardLayout>
+              <DashboardEventsPage />
+            </DashboardLayout>
           </ProtectedRoute>
         }
       />
@@ -79,7 +87,9 @@ export function AppRoutes() {
         path="/dashboard/events/:id"
         element={
           <ProtectedRoute>
-            <EventDetailPage />
+            <DashboardLayout>
+              <EventDetailPage />
+            </DashboardLayout>
           </ProtectedRoute>
         }
       />
@@ -87,7 +97,9 @@ export function AppRoutes() {
         path="/dashboard/team-members/contestant"
         element={
           <ProtectedRoute>
-            <DashboardTeamContestantPage />
+            <DashboardLayout>
+              <DashboardTeamContestantPage />
+            </DashboardLayout>
           </ProtectedRoute>
         }
       />
@@ -95,7 +107,9 @@ export function AppRoutes() {
         path="/dashboard/team-members/coach"
         element={
           <ProtectedRoute>
-            <DashboardTeamCoachPage />
+            <DashboardLayout>
+              <DashboardTeamCoachPage />
+            </DashboardLayout>
           </ProtectedRoute>
         }
       />
@@ -105,7 +119,9 @@ export function AppRoutes() {
         path="/admin"
         element={
           <ProtectedRoute requireAdmin>
-            <AdminDashboardPage />
+            <AdminLayout>
+              <AdminDashboardPage />
+            </AdminLayout>
           </ProtectedRoute>
         }
       />
@@ -113,7 +129,9 @@ export function AppRoutes() {
         path="/admin/dashboard"
         element={
           <ProtectedRoute requireAdmin>
-            <AdminDashboardPage />
+            <AdminLayout>
+              <AdminDashboardPage />
+            </AdminLayout>
           </ProtectedRoute>
         }
       />
@@ -121,7 +139,9 @@ export function AppRoutes() {
         path="/admin/events"
         element={
           <ProtectedRoute requireAdmin>
-            <AdminEventsPage />
+            <AdminLayout>
+              <AdminEventsPage />
+            </AdminLayout>
           </ProtectedRoute>
         }
       />
@@ -129,7 +149,9 @@ export function AppRoutes() {
         path="/admin/registrations"
         element={
           <ProtectedRoute requireAdmin>
-            <AdminRegistrationsPage />
+            <AdminLayout>
+              <AdminRegistrationsPage />
+            </AdminLayout>
           </ProtectedRoute>
         }
       />
@@ -137,7 +159,9 @@ export function AppRoutes() {
         path="/admin/analytics"
         element={
           <ProtectedRoute requireAdmin>
-            <AdminAnalyticsPage />
+            <AdminLayout>
+              <AdminAnalyticsPage />
+            </AdminLayout>
           </ProtectedRoute>
         }
       />
@@ -145,7 +169,9 @@ export function AppRoutes() {
         path="/admin/audit-log"
         element={
           <ProtectedRoute requireAdmin>
-            <AdminAuditLogPage />
+            <AdminLayout>
+              <AdminAuditLogPage />
+            </AdminLayout>
           </ProtectedRoute>
         }
       />
