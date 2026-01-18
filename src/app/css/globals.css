@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 @import './app.css';
 @import './layouts/container.css' layer(utilities);
 @import './layouts/sidebar.css' layer(utilities);
