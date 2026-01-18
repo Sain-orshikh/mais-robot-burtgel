@@ -1,7 +1,5 @@
-'use client'
-
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import CardBox from '@/app/components/shared/CardBox'
@@ -123,7 +121,7 @@ export function DashboardOverview() {
                 <Users className='text-blue-600' size={24} />
               </div>
             </div>
-            <Link href='/dashboard/team-members/contestant'>
+            <Link to='/dashboard/team-members/contestant'>
               <Button variant='link' className='p-0 h-auto mt-2 text-blue-500 text-sm'>
                 Manage →
               </Button>
@@ -144,7 +142,7 @@ export function DashboardOverview() {
                 <UserPlus className='text-purple-600' size={24} />
               </div>
             </div>
-            <Link href='/dashboard/team-members/coach'>
+            <Link to='/dashboard/team-members/coach'>
               <Button variant='link' className='p-0 h-auto mt-2 text-purple-500 text-sm'>
                 Manage →
               </Button>
@@ -165,7 +163,7 @@ export function DashboardOverview() {
                 <Calendar className='text-green-600' size={24} />
               </div>
             </div>
-            <Link href='/dashboard/events'>
+            <Link to='/dashboard/events'>
               <Button variant='link' className='p-0 h-auto mt-2 text-green-500 text-sm'>
                 Browse →
               </Button>
@@ -186,7 +184,7 @@ export function DashboardOverview() {
                 <Trophy className='text-orange-600' size={24} />
               </div>
             </div>
-            <Link href='/dashboard/events'>
+            <Link to='/dashboard/events'>
               <Button variant='link' className='p-0 h-auto mt-2 text-orange-500 text-sm'>
                 View →
               </Button>
@@ -227,7 +225,7 @@ export function DashboardOverview() {
                         <span className='text-xs text-gray-400 font-medium'>Step {step.step}</span>
                       </div>
                       <p className='text-sm text-gray-600 mb-3'>{step.description}</p>
-                      <Link href={step.action}>
+                      <Link to={step.action}>
                         <Button 
                           size='sm' 
                           variant='outline' 
@@ -252,19 +250,19 @@ export function DashboardOverview() {
               <CardTitle className='text-lg'>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className='gap-y-3'>
-              <Link href='/dashboard/team-members/contestant'>
+              <Link to='/dashboard/team-members/contestant'>
                 <Button className='w-full bg-blue-500 hover:bg-blue-600' size='sm'>
                   <Users className='mr-2' size={16} />
                   Add Contestant
                 </Button>
               </Link>
-              <Link href='/dashboard/team-members/coach'>
+              <Link to='/dashboard/team-members/coach'>
                 <Button className='w-full bg-purple-500 hover:bg-purple-600 mt-1' size='sm'>
                   <UserPlus className='mr-2' size={16} />
                   Add Coach
                 </Button>
               </Link>
-              <Link href='/dashboard/events'>
+              <Link to='/dashboard/events'>
                 <Button className='w-full bg-green-500 hover:bg-green-600 mt-1' size='sm'>
                   <Calendar className='mr-2' size={16} />
                   Browse Events
@@ -329,7 +327,7 @@ export function DashboardOverview() {
                   <span className='text-gray-400'>RRC, LSR, LUR</span>
                 </div>
               </div>
-              <Link href='/dashboard/events'>
+              <Link to='/dashboard/events'>
                 <Button variant='link' className='p-0 h-auto mt-3 text-blue-500 text-xs'>
                   View all categories →
                 </Button>

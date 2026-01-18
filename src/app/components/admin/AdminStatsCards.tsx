@@ -1,6 +1,4 @@
-'use client'
-
-import Link from 'next/link'
+import { Link } from 'react-router-dom'
 import CardBox from '@/app/components/shared/CardBox'
 import { 
   Users, 
@@ -43,7 +41,7 @@ const StatCard = ({ title, value, description, icon, color, bgColor, href }: Sta
   )
 
   if (href) {
-    return <Link href={href}>{content}</Link>
+    return <Link to={href}>{content}</Link>
   }
 
   return content

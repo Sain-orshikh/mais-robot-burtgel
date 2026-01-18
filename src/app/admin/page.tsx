@@ -1,10 +1,8 @@
-'use client'
-
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from 'react-router-dom'
 
 export default function AdminPage() {
-  const router = useRouter()
+  const navigate = useNavigate()
 
   useEffect(() => {
     // Check if user is authenticated
@@ -12,11 +10,11 @@ export default function AdminPage() {
     
     // Redirect to dashboard if authenticated, otherwise to login
     if (isAuthenticated) {
-      router.replace('/admin/dashboard')
+      navigate('/admin/dashboard', { replace: true })
     } else {
-      router.replace('/admin/login')
+      navigate('/admin/login', { replace: true })
     }
-  }, [router])
+  }, [navigate])
 
   return (
     <div className='min-h-screen bg-background flex items-center justify-center'>

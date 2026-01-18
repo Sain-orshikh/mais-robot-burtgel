@@ -1,8 +1,8 @@
-'use client'
-
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { useNavigate, Link as RouterLink } from 'react-router-dom'
+
+// Compatibility wrapper
+const Link = RouterLink
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,7 +13,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
 
 export default function ForgotPasswordPage() {
   const { toast } = useToast()
-  const router = useRouter()
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [otp, setOtp] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -96,7 +96,7 @@ export default function ForgotPasswordPage() {
         title: 'Success',
         description: 'Password reset successfully',
       })
-      router.push('/login')
+      navigate('/login')
     } catch (error) {
       toast({
         title: 'Failed',
@@ -186,7 +186,7 @@ export default function ForgotPasswordPage() {
           )}
 
           <div className='text-center text-sm text-gray-600 mt-2'>
-            <Link href='/login' className='text-blue-600 hover:text-blue-700 font-medium'>
+              <Link to='/login' className='text-blue-600 hover:text-blue-700 font-medium'>
               Back to login
             </Link>
           </div>

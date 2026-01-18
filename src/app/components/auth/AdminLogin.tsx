@@ -1,7 +1,5 @@
-'use client'
-
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from 'react-router-dom'
 import CardBox from '../shared/CardBox'
 import { ThemeToggle } from '../shared/ThemeToggle'
 import { Label } from '@/components/ui/label'
@@ -10,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Alert } from '@/components/ui/alert'
 
 export const AdminLogin = () => {
-  const router = useRouter()
+  const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -23,8 +21,8 @@ export const AdminLogin = () => {
 
     // Simple authentication - paper wall as requested
     // In production, credentials should be in environment variables
-    const ADMIN_USERNAME = process.env.NEXT_PUBLIC_ADMIN_USERNAME || 'admin'
-    const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'admin123'
+    const ADMIN_USERNAME = process.env.VITE_ADMIN_USERNAME || 'admin'
+    const ADMIN_PASSWORD = process.env.VITE_ADMIN_PASSWORD || 'admin123'
 
     // Simulate a small delay for better UX
     await new Promise((resolve) => setTimeout(resolve, 500))
@@ -36,7 +34,7 @@ export const AdminLogin = () => {
       localStorage.setItem('adminLoginTime', new Date().toISOString())
       
       // Redirect to admin dashboard
-      router.push('/admin/dashboard')
+      navigate('/admin/dashboard')
     } else {
       setError('Нэвтрэх нэр эсвэл нууц үг буруу байна')
       setIsLoading(false)

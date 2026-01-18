@@ -1,7 +1,5 @@
-'use client'
-
 import { useState, useEffect, useMemo } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useNavigate, useParams } from 'react-router-dom'
 import { eventApi } from '@/lib/api/events'
 import { contestantApi } from '@/lib/api/contestants'
 import { coachApi } from '@/lib/api/coaches'
@@ -58,11 +56,13 @@ const BACKEND_CATEGORY_CONFIG: { [key: string]: { maxTeamsPerOrg: number, minCon
 }
 
 export default function EventDetailPage() {
-  const router = useRouter()
-  const params = useParams()
+  const navigate = useNavigate()
+  const { id: eventId } = useParams<{ id: string }>()
   const { toast } = useToast()
   const { organisation } = useAuth()
-  const eventId = params.id as string
+  
+  // Type guard for eventId
+  const validEventId = eventId || ''
   
   const [event, setEvent] = useState<Event | null>(null)
   const [contestants, setContestants] = useState<Contestant[]>([])
@@ -125,17 +125,19 @@ export default function EventDetailPage() {
   }, [myTeams, myRegistrations, selectedCategory])
 
   useEffect(() => {
-    fetchData()
-  }, [eventId])
+    if (validEventId) {
+      fetchData()
+    }
+  }, [validEventId])
 
   const fetchData = async () => {
     try {
       const [eventData, contestantsData, coachesData, teamsData, paymentsData] = await Promise.all([
-        eventApi.getById(eventId),
+        eventApi.getById(validEventId),
         contestantApi.getAll(),
         coachApi.getAll(),
-        teamApi.getByEvent(eventId),
-        paymentApi.getPaymentStatus(eventId).catch(() => []),
+        teamApi.getByEvent(validEventId),
+        paymentApi.getPaymentStatus(validEventId).catch(() => []),
       ])
       
       // Fetch my registrations from the event
@@ -203,7 +205,7 @@ export default function EventDetailPage() {
     setCreating(true)
     try {
       await teamApi.create({
-        eventId,
+        eventId: validEventId,
         categoryCode: selectedCategory,
         robotName,
         contestantIds: selectedContestants,
@@ -257,7 +259,7 @@ export default function EventDetailPage() {
     const amount = unpaidTeams.length * 20000 // 20,000₮ per team
 
     await paymentApi.submitPayment({
-      eventId,
+      eventId: validEventId,
       receiptUrl,
       teamIds,
       amount,
@@ -302,7 +304,7 @@ export default function EventDetailPage() {
     <div className='container mx-auto px-6 py-8'>
       <Button
         variant='ghost'
-        onClick={() => router.push('/dashboard/events')}
+        onClick={() => navigate('/dashboard/events')}
         className='mb-4'
       >
         <ArrowLeft className='mr-2 h-4 w-4' />
@@ -872,7 +874,7 @@ export default function EventDetailPage() {
         <PaymentModal
           isOpen={showPaymentModal}
           onClose={() => setShowPaymentModal(false)}
-          eventId={eventId}
+          eventId={validEventId}
           eventName={event.name}
           totalTeams={myTeams.filter(t => t.status === 'active' && !(t as any).paymentId).length}
           organisationId={organisation.organisationId}

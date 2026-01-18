@@ -1,8 +1,8 @@
-'use client'
-
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { useNavigate, Link as RouterLink } from 'react-router-dom'
+
+// Compatibility wrapper
+const Link = RouterLink
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,7 +11,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/use-toast'
 
 export default function LoginPage() {
-  const router = useRouter()
+  const navigate = useNavigate()
   const { login } = useAuth()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
@@ -100,14 +100,14 @@ export default function LoginPage() {
             </Button>
 
             <div className='text-center text-sm text-gray-600'>
-              <Link href='/forgot-password' className='text-blue-600 hover:text-blue-700 font-medium'>
+              <Link to='/forgot-password' className='text-blue-600 hover:text-blue-700 font-medium'>
                 Forgot password?
               </Link>
             </div>
 
             <div className='text-center text-sm text-gray-600 mt-4'>
               Doesn&apos;t have an account?{' '}
-              <Link href='/register' className='text-blue-600 hover:text-blue-700 font-medium'>
+              <Link to='/register' className='text-blue-600 hover:text-blue-700 font-medium'>
                 register here
               </Link>
             </div>

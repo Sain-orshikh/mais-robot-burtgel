@@ -1,8 +1,5 @@
-'use client'
-
 import { useState } from 'react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { Link as RouterLink, useLocation } from 'react-router-dom'
 import { 
   Home, 
   Users, 
@@ -55,10 +52,12 @@ const menuItems = [
 ]
 
 export function DashboardSidebar() {
-  const pathname = usePathname()
+  const location = useLocation()
   const { organisation } = useAuth()
   const { toast } = useToast()
   const [expandedMenus, setExpandedMenus] = useState<string[]>(['team-members'])
+
+  const pathname = location.pathname
 
   const toggleMenu = (id: string) => {
     setExpandedMenus((prev) =>
@@ -66,7 +65,7 @@ export function DashboardSidebar() {
     )
   }
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
+  const isActive = (href: string) => location.pathname === href || location.pathname.startsWith(href + '/')
 
   const handleComingSoon = (feature: string) => {
     toast({
@@ -113,8 +112,8 @@ export function DashboardSidebar() {
         <ul className='space-y-1'>
           {/* Dashboard Home */}
           <li>
-            <Link
-              href='/dashboard'
+            <RouterLink
+              to='/dashboard'
               className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                 pathname === '/dashboard'
                   ? 'bg-gray-100 text-gray-900 font-medium'
@@ -123,7 +122,7 @@ export function DashboardSidebar() {
             >
               <Home size={20} />
               <span>Dashboard</span>
-            </Link>
+            </RouterLink>
           </li>
 
           {/* Main Menu Items */}
@@ -155,8 +154,8 @@ export function DashboardSidebar() {
                     <ul className='mt-1 ml-4 space-y-1'>
                       {item.submenu.map((subItem) => (
                         <li key={subItem.href}>
-                          <Link
-                            href={subItem.href}
+                          <RouterLink
+                            to={subItem.href}
                             className={`block px-4 py-2 rounded-lg transition-colors ${
                               pathname === subItem.href
                                 ? 'bg-blue-50 text-blue-600 font-medium'
@@ -164,7 +163,7 @@ export function DashboardSidebar() {
                             }`}
                           >
                             {subItem.label}
-                          </Link>
+                          </RouterLink>
                         </li>
                       ))}
                     </ul>
@@ -172,8 +171,8 @@ export function DashboardSidebar() {
                 </>
               ) : (
                 item.id === 'events' ? (
-                  <Link
-                    href={item.href}
+                  <RouterLink
+                    to={item.href}
                     className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                       isActive(item.href)
                         ? 'bg-gray-100 text-gray-900 font-medium'
@@ -182,7 +181,7 @@ export function DashboardSidebar() {
                   >
                     <item.icon size={20} />
                     <span>{item.label}</span>
-                  </Link>
+                  </RouterLink>
                 ) : (
                   <button
                     onClick={() => handleComingSoon(item.label)}

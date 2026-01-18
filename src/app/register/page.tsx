@@ -1,8 +1,8 @@
-'use client'
-
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { useNavigate, Link as RouterLink } from 'react-router-dom'
+
+// Compatibility wrapper
+const Link = RouterLink
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -46,7 +46,7 @@ const provinces = [
 const institutionTypes = ['company', 'school', 'individual']
 
 export default function RegisterPage() {
-  const router = useRouter()
+  const navigate = useNavigate()
   const { register } = useAuth()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
@@ -127,7 +127,7 @@ export default function RegisterPage() {
           <h1 className='text-2xl font-bold text-center'>Register Account</h1>
           <p className='text-sm text-gray-600 text-center'>
             Already have an account?{' '}
-            <Link href='/login' className='text-blue-600 hover:text-blue-700 font-medium'>
+            <Link to='/login' className='text-blue-600 hover:text-blue-700 font-medium'>
               Login here
             </Link>
           </p>

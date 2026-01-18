@@ -1,7 +1,5 @@
-'use client'
-
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,7 +10,7 @@ import { useToast } from '@/hooks/use-toast'
 import { Badge } from '@/components/ui/badge'
 
 export default function ProfilePage() {
-  const router = useRouter()
+  const navigate = useNavigate()
   const { organisation } = useAuth()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
@@ -337,7 +335,7 @@ export default function ProfilePage() {
                   <Button 
                     type="button" 
                     variant="outline"
-                    onClick={() => router.push('/dashboard')}
+                    onClick={() => navigate('/dashboard')}
                     disabled={isLoading}
                   >
                     Cancel

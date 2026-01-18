@@ -1,12 +1,9 @@
-'use client'
-
 import { useAdminAuth } from '@/hooks/useAdminAuth'
-import { ThemeToggle } from '@/app/components/shared/ThemeToggle'
+import { Link } from 'react-router-dom'
 import { mockRegistrations, getRegistrationStats, getCategoryStats, getSchoolStats, COMPETITION_CATEGORIES } from '@/data/mockRegistrations'
 import CardBox from '@/app/components/shared/CardBox'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, TrendingUp, Users, School, Calendar, Award } from 'lucide-react'
-import Link from 'next/link'
 import {
   Table,
   TableBody,
@@ -16,6 +13,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { ThemeToggle } from '@/app/components/shared/ThemeToggle'
 
 export default function AnalyticsPage() {
   const { isAuthenticated, isChecking } = useAdminAuth()
@@ -64,7 +62,7 @@ export default function AnalyticsPage() {
           <div className='flex items-center justify-between'>
             <div className='flex items-center gap-4'>
               <Button asChild variant='ghost' size='sm'>
-                <Link href='/admin/dashboard'>
+                <Link to='/admin/dashboard'>
                   <ArrowLeft size={20} />
                 </Link>
               </Button>

@@ -1,22 +1,20 @@
-'use client'
-
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 
 export default function HomePage() {
-  const router = useRouter()
+  const navigate = useNavigate()
   const { organisation, loading } = useAuth()
 
   useEffect(() => {
     if (!loading) {
       if (organisation) {
-        router.push('/dashboard')
+        navigate('/dashboard')
       } else {
-        router.push('/login')
+        navigate('/login')
       }
     }
-  }, [organisation, loading, router])
+  }, [organisation, loading, navigate])
 
   return (
     <div className="flex items-center justify-center h-screen">

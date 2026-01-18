@@ -1,7 +1,5 @@
-'use client'
-
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { Link as RouterLink, useNavigate } from 'react-router-dom'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { AdminHeader } from '@/app/components/admin/AdminHeader'
 import { AdminStatsCards } from '@/app/components/admin/AdminStatsCards'
@@ -11,12 +9,14 @@ import { teamApi } from '@/lib/api/teams'
 import { paymentApi } from '@/lib/api/payments'
 import { Button } from '@/components/ui/button'
 import { Users, BarChart3, Calendar } from 'lucide-react'
-import Link from 'next/link'
 import { useToast } from '@/hooks/use-toast'
+
+// Compatibility wrapper
+const Link = RouterLink
 
 export default function AdminDashboard() {
   const { isAuthenticated, isChecking } = useAdminAuth()
-  const router = useRouter()
+  const navigate = useNavigate()
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
@@ -157,19 +157,19 @@ export default function AdminDashboard() {
         {/* Quick Actions */}
         <div className='flex gap-4 mb-8'>
           <Button asChild className='gap-2'>
-            <Link href='/admin/events'>
+            <Link to='/admin/events'>
               <Calendar size={20} />
               Тэмцээн удирдах
             </Link>
           </Button>
           <Button asChild variant='outline' className='gap-2'>
-            <Link href='/admin/registrations'>
+            <Link to='/admin/registrations'>
               <Users size={20} />
               Бүртгэлүүд харах
             </Link>
           </Button>
           <Button asChild variant='outline' className='gap-2'>
-            <Link href='/admin/analytics'>
+            <Link to='/admin/analytics'>
               <BarChart3 size={20} />
               Статистик
             </Link>
@@ -185,7 +185,7 @@ export default function AdminDashboard() {
           <RecentRegistrations
             registrations={recentTeams}
             limit={8}
-            onViewDetails={() => router.push('/admin/registrations')}
+            onViewDetails={() => navigate('/admin/registrations')}
           />
         </div>
       </main>

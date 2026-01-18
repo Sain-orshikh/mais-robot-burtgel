@@ -1,5 +1,3 @@
-'use client'
-
 import { Menu, X, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
@@ -10,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from 'react-router-dom'
 
 interface DashboardHeaderProps {
   onToggleSidebar: () => void
@@ -19,18 +17,18 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({ onToggleSidebar, isSidebarOpen }: DashboardHeaderProps) {
   const { organisation, logout } = useAuth()
-  const router = useRouter()
+  const navigate = useNavigate()
 
   const handleLogout = async () => {
     await logout()
   }
 
   const handleProfile = () => {
-    router.push('/dashboard/profile')
+    navigate('/dashboard/profile')
   }
 
   const handleChangePassword = () => {
-    router.push('/dashboard/profile#password')
+    navigate('/dashboard/profile#password')
   }
 
   return (

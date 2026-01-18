@@ -1,5 +1,3 @@
-'use client'
-
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { ThemeToggle } from '@/app/components/shared/ThemeToggle'
 import { getAuditLog } from '@/data/auditLog'
@@ -15,9 +13,11 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Shield } from 'lucide-react'
-import Link from 'next/link'
+import { Link as RouterLink } from 'react-router-dom'
 import { format } from 'date-fns'
 import CardBox from '@/app/components/shared/CardBox'
+
+const Link = RouterLink
 
 export default function AuditLogPage() {
   const { isAuthenticated, isChecking } = useAdminAuth()
@@ -55,7 +55,7 @@ export default function AuditLogPage() {
           <div className='flex justify-between items-center'>
             <div className='flex items-center gap-4'>
               <Button variant='ghost' size='sm' asChild>
-                <Link href='/admin/registrations'>
+                <Link to='/admin/registrations'>
                   <ArrowLeft size={18} />
                 </Link>
               </Button>

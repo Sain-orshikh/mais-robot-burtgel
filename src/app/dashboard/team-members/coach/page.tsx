@@ -1,5 +1,3 @@
-'use client'
-
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -27,10 +25,12 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Search, Edit, Trash2, Plus } from 'lucide-react'
-import Link from 'next/link'
+import { Link as RouterLink } from 'react-router-dom'
 import { coachApi } from '@/lib/api/coaches'
 import { Coach } from '@/types/models'
 import { useToast } from '@/hooks/use-toast'
+
+const Link = RouterLink
 
 export default function CoachLibraryPage() {
   const { toast } = useToast()
@@ -214,7 +214,7 @@ export default function CoachLibraryPage() {
     <div className='container mx-auto px-6 py-8'>
       {/* Breadcrumb */}
       <div className='mb-6 text-sm text-gray-600'>
-        <Link href='/dashboard/team-members' className='hover:text-blue-500'>
+        <Link to='/dashboard/team-members' className='hover:text-blue-500'>
           Team Members
         </Link>
         {' > '}

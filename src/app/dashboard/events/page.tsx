@@ -1,14 +1,12 @@
-'use client'
-
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from 'react-router-dom'
 import { eventApi } from '@/lib/api/events'
 import { Event } from '@/types/models'
 import { Star } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 export default function EventsPage() {
-  const router = useRouter()
+  const navigate = useNavigate()
   const { toast } = useToast()
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
@@ -53,7 +51,7 @@ export default function EventsPage() {
         {events.map((event) => (
           <div
             key={event._id}
-            onClick={() => router.push(`/dashboard/events/${event._id}`)}
+            onClick={() => navigate(`/dashboard/events/${event._id}`)}
             className='bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow cursor-pointer'
           >
             {/* Event Image/Icon */}

@@ -1,9 +1,7 @@
-'use client'
-
 import { DashboardSidebar } from '@/app/components/dashboard/DashboardSidebar'
 import { DashboardHeader } from '@/app/components/dashboard/DashboardHeader'
 import { useAuth } from '@/hooks/useAuth'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 
 export default function DashboardLayout({
@@ -12,14 +10,14 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const { organisation, loading } = useAuth()
-  const router = useRouter()
+  const navigate = useNavigate()
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
 
   useEffect(() => {
     if (!loading && !organisation) {
-      router.push('/')
+      navigate('/')
     }
-  }, [organisation, loading, router])
+  }, [organisation, loading, navigate])
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen)
