@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Base styles - Tailwind is imported in globals.css */
 
 * {
   margin: 0;

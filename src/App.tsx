@@ -2,6 +2,8 @@ import { AppRoutes } from '@/router'
 import { Toaster } from '@/components/ui/toaster'
 import { AuthProvider } from '@/hooks/useAuth'
 import { ThemeProvider } from '@/components/theme-provider'
+import './index.css'
+import './app/css/globals.css'
 import './App.css'
 
 export default function App() {
