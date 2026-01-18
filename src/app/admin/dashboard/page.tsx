@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link as RouterLink, useNavigate } from 'react-router-dom'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
-import { AdminHeader } from '@/app/components/admin/AdminHeader'
 import { AdminStatsCards } from '@/app/components/admin/AdminStatsCards'
 import { RecentRegistrations } from '@/app/components/admin/RecentRegistrations'
 import { eventApi } from '@/lib/api/events'
@@ -136,7 +135,6 @@ export default function AdminDashboard() {
   if (loading) {
     return (
       <div className='min-h-screen bg-background'>
-        <AdminHeader />
         <div className='container mx-auto px-6 py-8 flex items-center justify-center h-96'>
           <div className='text-center'>
             <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto'></div>
@@ -149,9 +147,6 @@ export default function AdminDashboard() {
 
   return (
     <div className='min-h-screen bg-background'>
-      {/* Header */}
-      <AdminHeader />
-
       {/* Main Content */}
       <main className='container mx-auto px-6 py-8'>
         {/* Quick Actions */}

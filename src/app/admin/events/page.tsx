@@ -21,7 +21,6 @@ import {
 } from '@/components/ui/table'
 import { Plus, Edit, Trash2, Calendar } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { AdminHeader } from '@/app/components/admin/AdminHeader'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
@@ -374,8 +373,6 @@ export default function AdminEventsPage() {
 
   return (
     <div className='min-h-screen bg-gray-50'>
-      <AdminHeader />
-      
       <div className='container mx-auto px-6 py-8'>
         <div className='flex justify-between items-center mb-6'>
           <div>
