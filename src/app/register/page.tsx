@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/select'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/use-toast'
+import { ThemeToggle } from '@/app/components/shared/ThemeToggle'
 
 const provinces = [
   'Arkhangai',
@@ -121,18 +122,22 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className='min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-400 to-blue-500 px-4 py-8'>
-      <Card className='w-full max-w-2xl'>
-        <CardHeader className='space-y-2 pb-4'>
-          <h1 className='text-2xl font-bold text-center'>Register Account</h1>
-          <p className='text-sm text-gray-600 text-center'>
-            Already have an account?{' '}
-            <Link to='/login' className='text-blue-600 hover:text-blue-700 font-medium'>
-              Login here
-            </Link>
-          </p>
-        </CardHeader>
-        <CardContent>
+    <div className='min-h-screen flex flex-col bg-gradient-to-br from-blue-400 to-blue-500 px-4 py-8'>
+      <div className='flex justify-end mb-4'>
+        <ThemeToggle />
+      </div>
+      <div className='flex-1 flex items-center justify-center'>
+        <Card className='w-full max-w-2xl'>
+          <CardHeader className='space-y-2 pb-4'>
+            <h1 className='text-2xl font-bold text-center'>Register Account</h1>
+            <p className='text-sm text-gray-600 text-center'>
+              Already have an account?{' '}
+              <Link to='/login' className='text-blue-600 hover:text-blue-700 font-medium'>
+                Login here
+              </Link>
+            </p>
+          </CardHeader>
+          <CardContent>
           <form onSubmit={handleSubmit} className='space-y-4'>
             {/* Institution Type */}
             <div className='space-y-2'>
@@ -354,6 +359,7 @@ export default function RegisterPage() {
           </form>
         </CardContent>
       </Card>
+      </div>
     </div>
   )
 }

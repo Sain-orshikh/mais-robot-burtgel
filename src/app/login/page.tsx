@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/use-toast'
+import { ThemeToggle } from '@/app/components/shared/ThemeToggle'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -50,8 +51,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className='min-h-screen flex items-center justify-center bg-linear-to-br from-blue-400 to-blue-500 px-4'>
-      <Card className='w-full max-w-md'>
+    <div className='min-h-screen flex flex-col bg-linear-to-br from-blue-400 to-blue-500 px-4'>
+      <div className='flex justify-end pt-4'>
+        <ThemeToggle />
+      </div>
+      <div className='flex-1 flex items-center justify-center'>
+        <Card className='w-full max-w-md'>
         <CardHeader className='space-y-4 pb-4'>
           <div className='flex justify-center'>
             <img 
@@ -114,6 +119,7 @@ export default function LoginPage() {
           </form>
         </CardContent>
       </Card>
+      </div>
     </div>
   )
 }
