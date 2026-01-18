@@ -11,7 +11,10 @@ export default function DashboardLayout({
 }) {
   const { organisation, loading } = useAuth()
   const navigate = useNavigate()
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.innerWidth >= 768
+  })
 
   useEffect(() => {
     if (!loading && !organisation) {
