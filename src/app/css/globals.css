@@ -214,38 +214,34 @@ main {
   }
 }
 
-@utility form-control {
-  & input {
+@layer utilities {
+  .form-control input {
     @apply border rounded-md border-border bg-transparent ring-transparent dark:ring-transparent dark:bg-transparent w-full text-sm;
   }
 
-  & input:focus {
-    @apply shadow-none dark:shadow-none ring-transparent dark:ring-transparent;
+  .form-control input:focus {
+    @apply border-primary dark:border-primary outline-none shadow-none ring-offset-0 ring-transparent;
   }
 
-  & input:focus {
-    @apply border-primary dark:border-primary outline-hidden shadow-none ring-offset-0 ring-transparent;
+  .form-control-textarea {
+    @apply rounded-md border border-border bg-transparent dark:bg-transparent w-full text-sm p-4;
   }
-}
 
-@utility form-control-textarea {
-  @apply rounded-md border border-border bg-transparent dark:bg-transparent w-full text-sm p-4;
-
-  &:focus {
-    @apply border-primary dark:border-primary outline-hidden shadow-none ring-offset-0 ring-transparent;
+  .form-control-textarea:focus {
+    @apply border-primary dark:border-primary outline-none shadow-none ring-offset-0 ring-transparent;
   }
-}
 
-@utility card-title {
-  @apply text-lg font-semibold text-foreground;
-}
+  .card-title {
+    @apply text-lg font-semibold text-foreground;
+  }
 
-@utility border-ld {
-  @apply border-border;
-}
+  .border-ld {
+    @apply border-border;
+  }
 
-@utility bg-hover {
-  @apply hover:bg-lightprimary;
+  .bg-hover:hover {
+    @apply bg-lightprimary;
+  }
 }
 
 @layer utilities {

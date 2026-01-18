@@ -28,7 +28,7 @@
     "@radix-ui/react-toast": "^1.2.15",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tabler/icons-react": "3.5.0",
-    "@tailwindcss/postcss": "^4.1.6",
+    "@tailwindcss/postcss": "^4.1.18",
     "@tanstack/react-table": "^8.21.3",
     "aos": "2.3.4",
     "apexcharts": "3.49.1",
@@ -73,7 +73,6 @@
     "@types/react-syntax-highlighter": "^15.5.13",
     "@vitejs/plugin-react": "^4.2.0",
     "postcss": "8",
-    "tailwindcss": "^4.1.6",
     "tailwindcss-animate": "^1.0.7",
     "tw-animate-css": "^1.3.7",
     "typescript": "5",
@@ -84,4 +83,3 @@
     "@types/react-dom": "19.2.2"
   }
 }
-
