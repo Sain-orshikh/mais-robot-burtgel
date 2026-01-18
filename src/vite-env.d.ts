@@ -2,6 +2,8 @@
 
 interface ImportMetaEnv {
   readonly VITE_API_URL: string
+  readonly VITE_ADMIN_USERNAME: string
+  readonly VITE_ADMIN_PASSWORD: string
   readonly VITE_CLOUDINARY_CLOUD_A: string
   readonly VITE_CLOUDINARY_PRESET_A: string
   readonly VITE_CLOUDINARY_CLOUD_B: string

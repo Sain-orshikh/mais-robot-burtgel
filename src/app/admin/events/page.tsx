@@ -23,7 +23,7 @@ import { Plus, Edit, Trash2, Calendar } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { AdminHeader } from '@/app/components/admin/AdminHeader'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
 // 12 competition categories
 const AVAILABLE_CATEGORIES = [

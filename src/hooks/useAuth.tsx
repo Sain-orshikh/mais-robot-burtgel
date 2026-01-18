@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
   useEffect(() => {
     checkAuth()

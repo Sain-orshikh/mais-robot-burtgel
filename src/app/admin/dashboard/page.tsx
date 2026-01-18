@@ -59,7 +59,7 @@ export default function AdminDashboard() {
       
       // Fetch all teams to get actual team data
       const teamPromises = events.map(event => 
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/teams/event/${event._id}`, {
+        fetch(`${import.meta.env.VITE_API_URL}/api/teams/event/${event._id}`, {
           credentials: 'include'
         }).then(res => res.ok ? res.json() : []).catch(() => [])
       )
@@ -73,7 +73,7 @@ export default function AdminDashboard() {
       const deletedTeams = allTeams.filter((t: any) => t.status === 'deleted')
       
       // Get all payments
-      const paymentResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/payments/admin/all`, {
+      const paymentResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/payments/admin/all`, {
         credentials: 'include'
       })
       const allPayments = paymentResponse.ok ? await paymentResponse.json() : []

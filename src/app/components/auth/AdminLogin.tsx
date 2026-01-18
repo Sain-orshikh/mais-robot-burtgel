@@ -21,8 +21,8 @@ export const AdminLogin = () => {
 
     // Simple authentication - paper wall as requested
     // In production, credentials should be in environment variables
-    const ADMIN_USERNAME = process.env.VITE_ADMIN_USERNAME || 'admin'
-    const ADMIN_PASSWORD = process.env.VITE_ADMIN_PASSWORD || 'admin123'
+    const ADMIN_USERNAME = import.meta.env.VITE_ADMIN_USERNAME || 'admin'
+    const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123'
 
     // Simulate a small delay for better UX
     await new Promise((resolve) => setTimeout(resolve, 500))
