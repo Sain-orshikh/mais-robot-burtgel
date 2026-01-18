@@ -1,20 +1,20 @@
 // Cloudinary upload utility with multiple cloud fallback
 const CLOUDINARY_CLOUDS = [
   {
-    name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_A || 'doatnw5dx',
-    preset: process.env.NEXT_PUBLIC_CLOUDINARY_PRESET_A || 'robot_receipts',
+    name: import.meta.env.VITE_CLOUDINARY_CLOUD_A || 'doatnw5dx',
+    preset: import.meta.env.VITE_CLOUDINARY_PRESET_A || 'robot_receipts',
   },
   {
-    name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_B || 'dfvmd6drf',
-    preset: process.env.NEXT_PUBLIC_CLOUDINARY_PRESET_B || 'robot_receipts',
+    name: import.meta.env.VITE_CLOUDINARY_CLOUD_B || 'dfvmd6drf',
+    preset: import.meta.env.VITE_CLOUDINARY_PRESET_B || 'robot_receipts',
   },
   {
-    name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_C || 'dncci4ypg',
-    preset: process.env.NEXT_PUBLIC_CLOUDINARY_PRESET_C || 'robot_receipts',
+    name: import.meta.env.VITE_CLOUDINARY_CLOUD_C || 'dncci4ypg',
+    preset: import.meta.env.VITE_CLOUDINARY_PRESET_C || 'robot_receipts',
   },
   {
-    name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_D || 'dyez98wtv',
-    preset: process.env.NEXT_PUBLIC_CLOUDINARY_PRESET_D || 'robot_receipts',
+    name: import.meta.env.VITE_CLOUDINARY_CLOUD_D || 'dyez98wtv',
+    preset: import.meta.env.VITE_CLOUDINARY_PRESET_D || 'robot_receipts',
   },
 ]
 

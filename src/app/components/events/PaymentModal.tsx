@@ -37,9 +37,9 @@ export function PaymentModal({
   const [uploading, setUploading] = useState(false)
   
   // Get bank details from environment variables
-  const bankName = process.env.NEXT_PUBLIC_BANK_NAME || 'Bank Name'
-  const accountName = process.env.NEXT_PUBLIC_BANK_ACCOUNT_NAME || 'Account Name'
-  const accountNumber = process.env.NEXT_PUBLIC_BANK_ACCOUNT_NUMBER || ''
+  const bankName = import.meta.env.VITE_BANK_NAME || 'Bank Name'
+  const accountName = import.meta.env.VITE_BANK_ACCOUNT_NAME || 'Account Name'
+  const accountNumber = import.meta.env.VITE_BANK_ACCOUNT_NUMBER || ''
   
   // Format payment number with leading zeros (e.g., 001, 002, 003)
   const paymentNumber = String(paymentCount).padStart(3, '0')

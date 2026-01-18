@@ -79,7 +79,7 @@ export default function RegistrationsPage() {
       const event = await eventApi.getById(selectedEventId)
 
       // Fetch payments for mapping payment status
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
       const paymentsResponse = await fetch(`${apiUrl}/api/payments/admin/all`, {
         credentials: 'include',
         headers: {
@@ -157,7 +157,7 @@ export default function RegistrationsPage() {
     
     // Fetch payment for this registration
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
       const response = await fetch(`${apiUrl}/api/payments/admin/all`, {
         credentials: 'include', // Include cookies for authentication
         headers: {
