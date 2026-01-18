@@ -14,9 +14,26 @@ npm run build
 ```
 This creates a `dist/` folder with all optimized files.
 
+### 1a. (Optional but Recommended) Zip the dist/ folder
+Zipping makes upload faster, especially on slow connections:
+
+**On Windows (PowerShell):**
+```bash
+Compress-Archive -Path dist -DestinationPath dist.zip
+```
+
+**On Mac/Linux:**
+```bash
+zip -r dist.zip dist/
+```
+
+This creates `dist.zip` - much smaller and faster to upload than individual files.
+
 ### 2. Upload to cPanel
 
-#### Via cPanel File Manager:
+#### Option A: Upload Individual Files (Slower)
+
+##### Via cPanel File Manager:
 1. Log into cPanel
 2. Go to **File Manager**
 3. Navigate to **public_html** (or your domain folder)
@@ -31,13 +48,58 @@ This creates a `dist/` folder with all optimized files.
    - `icons/` folder
    - `images/` folder
 
-#### Via FTP/SFTP (Recommended for large transfers):
-1. Use FileZilla or similar FTP client
-2. Connect with credentials from cPanel
-3. Navigate to `public_html`
-4. Upload all `dist/` contents
+#### Option B: Upload ZIP File (Faster - Recommended)
 
-### 3. Configure .htaccess
+##### Via cPanel File Manager:
+1. Log into cPanel → **File Manager**
+2. Navigate to **public_html**
+3. Delete existing files (or upload to new domain)
+4. Upload `dist.zip` 
+5. Right-click `dist.zip` → **Extract**
+6. Select destination as current folder (`public_html`)
+7. All files will be extracted automatically
+8. Delete the `dist.zip` file after extraction
+
+##### Via cPanel Compressed File Manager:
+1. UploEnvironment Variables
+
+**Important Understanding:**
+- Vite processes environment variables **at build time**
+- Your `.env.local` values are compiled directly into the JavaScript
+- **NO .env file is needed in public_html** - values are already embedded
+- The app works completely standalone after build
+
+**If you need to change variables for different environments:**
+1. Create environment-specific files:
+   ```bash
+   .env.local              # Local development
+   .env.production         # For production build
+   .env.staging           # For staging build
+   ```
+
+2. Build for the target environment:
+   ```bash
+   npm run build                                    # Uses .env.local
+   npm run build -- --mode production             # Uses .env.production
+   ```
+
+3. Upload the resulting `dist/` folder
+
+**Example .env.production:**
+```env
+VITE_API_URL=https://api.yourdomain.com
+VITE_ADMIN_USERNAME=your_admin_username
+VITE_ADMIN_PASSWORD=your_admin_password
+VITE_CLOUDINARY_CLOUD_NAME=your_cloud_name
+VITE_CLOUDINARY_UPLOAD_PRESET=your_preset
+VITE_CLOUDINARY_API_KEY=your_api_key
+VITE_CLOUDINARY_API_SECRET=your_secret
+VITE_BANK_NAME=Bank_Name
+VITE_BANK_ACCOUNT_NAME=Account_Name
+VITE_BANK_ACCOUNT_NUMBER=Account_Number
+```
+
+Then build with: `npm run build -- --mode production`
 
 The `.htaccess` file in `dist/` handles:
 - **SPA Routing**: All requests go to `index.html` (required for React Router)

@@ -1,6 +1,8 @@
 /* Base styles - Tailwind is imported in globals.css */
 
-box-sizing: border-box;
+* {
+  box-sizing: border-box;
+}
 
 html,
 body {
