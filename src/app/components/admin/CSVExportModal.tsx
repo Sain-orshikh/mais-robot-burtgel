@@ -10,6 +10,13 @@ import {
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { Users, Users2, Building2, UserCheck } from 'lucide-react'
 
@@ -23,7 +30,7 @@ interface CSVExportModalProps {
 type ExportType = 'teams' | 'contestants' | 'coaches' | 'organisations' | null
 
 const TEAMS_FIELDS = [
-  { id: 'teamId', label: 'Team ID', key: '_id' },
+  { id: 'teamId', label: 'Team ID', key: 'teamId' },
   { id: 'teamName', label: 'Team Name', key: 'teamName' },
   { id: 'category', label: 'Category', key: 'category' },
   { id: 'organisation', label: 'Organisation', key: 'organisationName' },
@@ -32,7 +39,6 @@ const TEAMS_FIELDS = [
   { id: 'coachName', label: 'Coach Name', key: 'coachName' },
   { id: 'createdAt', label: 'Created Date', key: 'createdAt' },
   { id: 'status', label: 'Status', key: 'status' },
-  { id: 'notes', label: 'Notes', key: 'notes' },
 ]
 
 const CONTESTANTS_FIELDS = [
@@ -44,6 +50,7 @@ const CONTESTANTS_FIELDS = [
   { id: 'register', label: 'Registration ID', key: 'register' },
   { id: 'gender', label: 'Gender', key: 'gender' },
   { id: 'tursunUdur', label: 'Date of Birth', key: 'tursunUdur' },
+  { id: 'teamIds', label: 'Team IDs', key: 'teamIds' },
   { id: 'organisation', label: 'Organisation', key: 'organisationName' },
   { id: 'participationCount', label: 'Number of Participations', key: 'participationCount' },
 ]
@@ -57,6 +64,7 @@ const COACHES_FIELDS = [
   { id: 'register', label: 'Registration ID', key: 'register' },
   { id: 'gender', label: 'Gender', key: 'gender' },
   { id: 'tursunUdur', label: 'Date of Birth', key: 'tursunUdur' },
+  { id: 'teamIds', label: 'Team IDs', key: 'teamIds' },
   { id: 'organisation', label: 'Organisation', key: 'organisationName' },
   { id: 'participationCount', label: 'Number of Participations', key: 'participationCount' },
 ]
@@ -91,6 +99,8 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
   const [allCoaches, setAllCoaches] = useState<any[]>([])
   const [allOrganisations, setAllOrganisations] = useState<any[]>([])
   const [isLoadingData, setIsLoadingData] = useState(false)
+  const [selectedTeamCategory, setSelectedTeamCategory] = useState<string>('all')
+  const [teamCategories, setTeamCategories] = useState<string[]>([])
 
   // Fetch data from APIs based on export type
   useEffect(() => {
@@ -99,22 +109,40 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
     const fetchDataForExportType = async () => {
       setIsLoadingData(true)
       try {
+        // Determine API URL based on environment
+        const apiUrl = typeof window !== 'undefined' 
+          ? (window.location.hostname === 'localhost' 
+              ? 'http://localhost:5000'
+              : 'https://mais-robot-burtgel.onrender.com')
+          : 'http://localhost:5000'
+        
         switch (exportType) {
           case 'teams':
             if (allTeams.length === 0) {
-              const res = await fetch('https://mais-robot-burtgel.onrender.com/api/export/teams', {
+              const res = await fetch(`${apiUrl}/api/export/teams`, {
                 credentials: 'include',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
               })
               if (res.ok) {
                 const data = await res.json()
                 setAllTeams(data)
+                // Extract unique categories
+                const categories = Array.from(
+                  new Set(data.map((t: any) => t.category || t.categoryName).filter(Boolean))
+                )
+                setTeamCategories(categories.sort() as string[])
               }
             }
             break
           case 'contestants':
             if (allContestants.length === 0) {
-              const res = await fetch('https://localhost:5000/api/export/contestants', {
+              const res = await fetch(`${apiUrl}/api/export/contestants`, {
                 credentials: 'include',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
               })
               if (res.ok) {
                 const data = await res.json()
@@ -124,8 +152,11 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
             break
           case 'coaches':
             if (allCoaches.length === 0) {
-              const res = await fetch('https://localhost:5000/api/export/coaches', {
+              const res = await fetch(`${apiUrl}/api/export/coaches`, {
                 credentials: 'include',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
               })
               if (res.ok) {
                 const data = await res.json()
@@ -135,8 +166,11 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
             break
           case 'organisations':
             if (allOrganisations.length === 0) {
-              const res = await fetch('https://mais-robot-burtgel.onrender.com/api/export/organisations', {
+              const res = await fetch(`${apiUrl}/api/export/organisations`, {
                 credentials: 'include',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
               })
               if (res.ok) {
                 const data = await res.json()
@@ -179,6 +213,7 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
     setExportType(type)
     const fields = getFieldsForType(type)
     setSelectedFields(new Set(fields.slice(0, Math.ceil(fields.length / 2)).map(f => f.id)))
+    setSelectedTeamCategory('all')
   }
 
   const handleSelectAll = () => {
@@ -209,26 +244,26 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
     
     switch (exportType) {
       case 'teams':
-        // Use fetched teams data
+        // Use fetched teams data (already transformed and filtered by backend)
         if (allTeams.length > 0) {
-          exportData = allTeams.map(team => {
-            // Find contestants for this team
-            const teamContestants = allContestants.filter(c => c.teamId === team._id || c.team_id === team._id)
-            const contestantNames = teamContestants.map(c => `${c.firstName || ''} ${c.lastName || ''}`.trim()).join(', ')
-            
-            return {
-              _id: team._id || '',
-              teamName: team.teamName || team.team_name || '',
-              category: team.category || team.categoryDisplay || '',
-              organisationName: typeof team.organisationId === 'object' ? (team.organisationId.typeDetail || team.organisationId.name || '') : '',
-              contestantNames: contestantNames,
-              participantCount: teamContestants.length,
-              coachName: team.coachName || team.coach_name || '',
-              createdAt: team.createdAt || team.created_at || '',
-              status: team.status || 'pending',
-              notes: team.notes || '',
-            }
-          })
+          let teamsToExport = allTeams
+          // Filter by category if selected
+          if (selectedTeamCategory !== 'all') {
+            teamsToExport = teamsToExport.filter(team => 
+              (team.category || team.categoryName) === selectedTeamCategory
+            )
+          }
+          exportData = teamsToExport.map(team => ({
+            teamId: team.teamId || '',
+            teamName: team.teamName || '',
+            category: team.category || '',
+            organisationName: team.organisationName || '',
+            contestantNames: team.contestantNames || '',
+            participantCount: team.participantCount || 0,
+            coachName: team.coachName || '',
+            createdAt: team.createdAt || '',
+            status: team.status || '',
+          }))
         } else if (registrations.length > 0) {
           // Fallback to registrations if no API data
           const teams = new Map()
@@ -239,7 +274,7 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
             
             if (!teams.has(teamKey)) {
               teams.set(teamKey, {
-                _id: teamId,
+                teamId: teamId,
                 teamName: teamName,
                 category: reg.category || reg.categoryDisplay || reg.category_name || '',
                 organisationName: typeof reg.organisationId === 'object' ? (reg.organisationId.typeDetail || reg.organisationId.name || '') : '',
@@ -248,7 +283,6 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
                 coachName: reg.coachName || reg.coach_name || '',
                 createdAt: reg.registeredAt || reg.created_at || '',
                 status: reg.status || 'pending',
-                notes: reg.notes || '',
               })
             }
             const team = teams.get(teamKey)
@@ -264,24 +298,19 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
       case 'contestants':
         // Use fetched contestants data
         if (allContestants.length > 0) {
-          exportData = allContestants.map(contestant => {
-            const orgName = typeof contestant.organisationId === 'object' 
-              ? (contestant.organisationId.typeDetail || contestant.organisationId.name || '') 
-              : ''
-            
-            return {
-              contestantId: contestant.contestantId || '',
-              ner: contestant.ner || '',
-              ovog: contestant.ovog || '',
-              email: contestant.email || '',
-              phoneNumber: contestant.phoneNumber || '',
-              register: contestant.register || '',
-              gender: contestant.gender || '',
-              tursunUdur: contestant.tursunUdur || '',
-              organisationName: orgName,
-              participationCount: (contestant.participations && Array.isArray(contestant.participations)) ? contestant.participations.length : 0,
-            }
-          })
+          exportData = allContestants.map(contestant => ({
+            contestantId: contestant.contestantId || '',
+            ner: contestant.ner || '',
+            ovog: contestant.ovog || '',
+            email: contestant.email || '',
+            phoneNumber: contestant.phoneNumber || '',
+            register: contestant.register || '',
+            gender: contestant.gender || '',
+            tursunUdur: contestant.tursunUdur || '',
+            teamIds: contestant.teamIds || '',
+            organisationName: contestant.organisationName || '',
+            participationCount: contestant.participationCount || 0,
+          }))
         } else if (registrations.length > 0) {
           // Fallback to registrations
           const contestants: any[] = []
@@ -324,24 +353,19 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
       case 'coaches':
         // Use fetched coaches data
         if (allCoaches.length > 0) {
-          exportData = allCoaches.map(coach => {
-            const orgName = typeof coach.organisationId === 'object'
-              ? (coach.organisationId.typeDetail || coach.organisationId.name || '')
-              : ''
-            
-            return {
-              coachId: coach.coachId || '',
-              ner: coach.ner || '',
-              ovog: coach.ovog || '',
-              email: coach.email || '',
-              phoneNumber: coach.phoneNumber || '',
-              register: coach.register || '',
-              gender: coach.gender || '',
-              tursunUdur: coach.tursunUdur || '',
-              organisationName: orgName,
-              participationCount: (coach.participations && Array.isArray(coach.participations)) ? coach.participations.length : 0,
-            }
-          })
+          exportData = allCoaches.map(coach => ({
+            coachId: coach.coachId || '',
+            ner: coach.ner || '',
+            ovog: coach.ovog || '',
+            email: coach.email || '',
+            phoneNumber: coach.phoneNumber || '',
+            register: coach.register || '',
+            gender: coach.gender || '',
+            tursunUdur: coach.tursunUdur || '',
+            teamIds: coach.teamIds || '',
+            organisationName: coach.organisationName || '',
+            participationCount: coach.participationCount || 0,
+          }))
         } else if (registrations.length > 0) {
           // Fallback to registrations
           const coachesMap = new Map()
@@ -475,7 +499,9 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
       ...rows.map(row => row.map(cell => `"${cell}"`).join(',')),
     ].join('\n')
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    // Add UTF-8 BOM for proper encoding in Excel with Mongolian characters
+    const BOM = '\uFEFF'
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     const url = URL.createObjectURL(blob)
     link.setAttribute('href', url)
@@ -538,6 +564,27 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
             </DialogHeader>
 
             <div className='space-y-4'>
+              {exportType === 'teams' && teamCategories.length > 0 && (
+                <div>
+                  <Label htmlFor='teamCategory' className='text-sm font-medium mb-2 block'>
+                    Баг категорээр шүүлтүүрлэх
+                  </Label>
+                  <Select value={selectedTeamCategory} onValueChange={setSelectedTeamCategory}>
+                    <SelectTrigger id='teamCategory' className='w-full'>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='all'>Бүх категори</SelectItem>
+                      {teamCategories.map(category => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               <div className='flex gap-2'>
                 <Button variant='outline' size='sm' onClick={handleSelectAll}>
                   Бүгдийг Сонгох

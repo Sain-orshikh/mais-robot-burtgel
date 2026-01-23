@@ -32,6 +32,7 @@ export const RegistrationFilters = ({
   const [selectedOrgType, setSelectedOrgType] = useState<string>('all')
   const [selectedPaymentStatus, setSelectedPaymentStatus] = useState<string>('all')
   const [selectedAimag, setSelectedAimag] = useState<string>('all')
+  const [selectedTeamCategory, setSelectedTeamCategory] = useState<string>('all')
 
   // Extract unique organisation names
   const organisations = useMemo(() => {
@@ -65,6 +66,34 @@ export const RegistrationFilters = ({
       )
     )
     return uniqueAimags.sort()
+  }, [registrations])
+
+  // Extract unique team categories
+  const teamCategories = useMemo(() => {
+    const uniqueTeamCategories = Array.from(
+      new Set(
+        registrations
+          .flatMap((r: any) => {
+            // Handle teamIds array (from CSV export data)
+            if (Array.isArray(r.teamIds)) {
+              return r.teamIds
+                .map((t: any) => {
+                  if (typeof t === 'object' && t.categoryName) {
+                    return t.categoryName
+                  }
+                  return null
+                })
+                .filter(Boolean)
+            }
+            // Handle single team data
+            if (r.categoryName) {
+              return [r.categoryName]
+            }
+            return []
+          })
+      )
+    )
+    return uniqueTeamCategories.sort()
   }, [registrations])
 
   // Filter registrations
@@ -138,6 +167,26 @@ export const RegistrationFilters = ({
       })
     }
 
+    // Team category filter
+    if (selectedTeamCategory !== 'all') {
+      filtered = filtered.filter((reg: any) => {
+        // Handle teamIds array
+        if (Array.isArray(reg.teamIds)) {
+          return reg.teamIds.some((t: any) => {
+            if (typeof t === 'object' && t.categoryName) {
+              return t.categoryName === selectedTeamCategory
+            }
+            return false
+          })
+        }
+        // Handle single team data
+        if (reg.categoryName) {
+          return reg.categoryName === selectedTeamCategory
+        }
+        return false
+      })
+    }
+
     return filtered
   }, [
     registrations,
@@ -147,6 +196,7 @@ export const RegistrationFilters = ({
     selectedOrgType,
     selectedPaymentStatus,
     selectedAimag,
+    selectedTeamCategory,
   ])
 
   // Update parent whenever filters change
@@ -161,6 +211,8 @@ export const RegistrationFilters = ({
     setSelectedCategory('all')
     setSelectedOrgType('all')
     setSelectedPaymentStatus('all')
+    setSelectedAimag('all')
+    setSelectedTeamCategory('all')
   }
 
   // Count active filters
@@ -169,7 +221,9 @@ export const RegistrationFilters = ({
     (selectedStatus !== 'all' ? 1 : 0) +
     (selectedCategory !== 'all' ? 1 : 0) +
     (selectedOrgType !== 'all' ? 1 : 0) +
-    (selectedPaymentStatus !== 'all' ? 1 : 0)
+    (selectedPaymentStatus !== 'all' ? 1 : 0) +
+    (selectedAimag !== 'all' ? 1 : 0) +
+    (selectedTeamCategory !== 'all' ? 1 : 0)
 
   return (
     <CardBox className='mb-6'>
@@ -207,7 +261,7 @@ export const RegistrationFilters = ({
       </div>
 
       {/* Filter Dropdowns */}
-      <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3'>
+      <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3'>
         {/* Registration Status */}
         <div>
           <Label htmlFor='status' className='text-xs'>Бүртгэлийн төлөв</Label>
@@ -256,6 +310,27 @@ export const RegistrationFilters = ({
           </Select>
         </div>
 
+        {/* Category */}
+        <div>
+          <Label htmlFor='category' className='text-xs'>Категори</Label>
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger id='category' className='h-9 mt-1'>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='all'>Бүх категори</SelectItem>
+              {categories.map((category) => (
+                <SelectItem key={category} value={category}>
+                  {category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Secondary Filter Row */}
+      <div className='mt-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3'>
         {/* Aimag (Province) */}
         <div>
           <Label htmlFor='aimag' className='text-xs'>Аймаг/Хот</Label>
@@ -274,16 +349,16 @@ export const RegistrationFilters = ({
           </Select>
         </div>
 
-        {/* Category */}
+        {/* Team Category */}
         <div>
-          <Label htmlFor='category' className='text-xs'>Категори</Label>
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger id='category' className='h-9 mt-1'>
+          <Label htmlFor='teamCategory' className='text-xs'>Баг категори</Label>
+          <Select value={selectedTeamCategory} onValueChange={setSelectedTeamCategory}>
+            <SelectTrigger id='teamCategory' className='h-9 mt-1'>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value='all'>Бүх категори</SelectItem>
-              {categories.map((category) => (
+              <SelectItem value='all'>Бүх баг категори</SelectItem>
+              {teamCategories.map((category) => (
                 <SelectItem key={category} value={category}>
                   {category}
                 </SelectItem>

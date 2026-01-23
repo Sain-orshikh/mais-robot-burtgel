@@ -15,21 +15,37 @@ export const exportTeams = async (req, res) => {
             })
             .populate({
                 path: "coachId",
-                select: "_id firstName lastName email phone"
+                select: "_id ner ovog email phoneNumber"
             })
             .populate({
                 path: "contestantIds",
-                select: "_id firstName lastName email phone"
+                select: "_id ner ovog email phoneNumber"
             })
             .populate({
                 path: "paymentId",
                 select: "_id status"
             });
 
-        // Filter for teams with approved payments
-        const approvedTeams = teams.filter(team => {
-            return team.paymentId && team.paymentId.status === "approved";
-        });
+        // Filter for teams with approved payments and transform data
+        const approvedTeams = teams
+            .filter(team => team.paymentId && team.paymentId.status === "approved")
+            .map(team => ({
+                _id: team._id,
+                teamId: team.teamId,
+                teamName: team.robotName, // Map robotName to teamName
+                categoryCode: team.categoryCode,
+                category: team.categoryName, // Map categoryName to category
+                organisationName: team.organisationId?.typeDetail || team.organisationId?.name || '',
+                contestantNames: team.contestantIds 
+                    ? team.contestantIds.map(c => `${c.ner} ${c.ovog}`.trim()).join(', ')
+                    : '',
+                participantCount: team.contestantIds?.length || 0,
+                coachName: team.coachId 
+                    ? `${team.coachId.ner} ${team.coachId.ovog}`.trim()
+                    : '',
+                status: team.status,
+                createdAt: team.createdAt,
+            }));
 
         res.json(approvedTeams);
     } catch (error) {
@@ -47,7 +63,33 @@ export const exportContestants = async (req, res) => {
                 select: "_id typeDetail"
             });
 
-        res.json(contestants);
+        // Fetch all teams to find which teams have these contestants
+        const teams = await Team.find().select("_id teamId contestantIds");
+
+        // Enrich contestants with team IDs
+        const enrichedContestants = contestants.map(contestant => {
+            const contestantTeams = teams.filter(team => 
+                team.contestantIds.some(cId => cId.toString() === contestant._id.toString())
+            );
+            const teamIds = contestantTeams.map(t => t.teamId).join(', ');
+
+            return {
+                _id: contestant._id,
+                contestantId: contestant.contestantId,
+                ner: contestant.ner,
+                ovog: contestant.ovog,
+                email: contestant.email,
+                phoneNumber: contestant.phoneNumber,
+                register: contestant.register,
+                gender: contestant.gender,
+                tursunUdur: contestant.tursunUdur,
+                organisationName: contestant.organisationId?.typeDetail || '',
+                teamIds: teamIds,
+                participationCount: (contestant.participations && Array.isArray(contestant.participations)) ? contestant.participations.length : 0,
+            };
+        });
+
+        res.json(enrichedContestants);
     } catch (error) {
         console.error("Error exporting contestants:", error.message);
         res.status(500).json({ error: "Failed to export contestants" });
@@ -63,7 +105,31 @@ export const exportCoaches = async (req, res) => {
                 select: "_id typeDetail"
             });
 
-        res.json(coaches);
+        // Fetch all teams to find which teams have these coaches
+        const teams = await Team.find().select("_id teamId coachId");
+
+        // Enrich coaches with team IDs
+        const enrichedCoaches = coaches.map(coach => {
+            const coachTeams = teams.filter(team => team.coachId.toString() === coach._id.toString());
+            const teamIds = coachTeams.map(t => t.teamId).join(', ');
+
+            return {
+                _id: coach._id,
+                coachId: coach.coachId,
+                ner: coach.ner,
+                ovog: coach.ovog,
+                email: coach.email,
+                phoneNumber: coach.phoneNumber,
+                register: coach.register,
+                gender: coach.gender,
+                tursunUdur: coach.tursunUdur,
+                organisationName: coach.organisationId?.typeDetail || '',
+                teamIds: teamIds,
+                participationCount: (coach.participations && Array.isArray(coach.participations)) ? coach.participations.length : 0,
+            };
+        });
+
+        res.json(enrichedCoaches);
     } catch (error) {
         console.error("Error exporting coaches:", error.message);
         res.status(500).json({ error: "Failed to export coaches" });

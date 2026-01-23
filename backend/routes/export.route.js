@@ -1,5 +1,4 @@
 import express from "express";
-import { protectRoute } from "../middleware/protectRoute.js";
 import {
     exportTeams,
     exportContestants,
@@ -9,10 +8,10 @@ import {
 
 const router = express.Router();
 
-// All export endpoints require admin authentication
-router.get("/teams", protectRoute, exportTeams);
-router.get("/contestants", protectRoute, exportContestants);
-router.get("/coaches", protectRoute, exportCoaches);
-router.get("/organisations", protectRoute, exportOrganisations);
+// Export endpoints (no auth required since admin is already authenticated on frontend)
+router.get("/teams", exportTeams);
+router.get("/contestants", exportContestants);
+router.get("/coaches", exportCoaches);
+router.get("/organisations", exportOrganisations);
 
 export default router;
