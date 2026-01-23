@@ -5,6 +5,7 @@ import { RegistrationsTable } from '@/app/components/admin/RegistrationsTable'
 import { RegistrationDetailsDialog } from '@/app/components/admin/RegistrationDetailsDialog'
 import { RegistrationFilters } from '@/app/components/admin/RegistrationFilters'
 import { RejectRegistrationDialog } from '@/app/components/admin/RejectRegistrationDialog'
+import { CSVExportModal } from '@/app/components/admin/CSVExportModal'
 import { eventApi } from '@/lib/api/events'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Download, RefreshCw } from 'lucide-react'
@@ -33,6 +34,7 @@ export default function RegistrationsPage() {
   const [selectedPayment, setSelectedPayment] = useState<any | null>(null)
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false)
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
+  const [csvExportModalOpen, setCSVExportModalOpen] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
 
   useEffect(() => {
@@ -271,61 +273,7 @@ export default function RegistrationsPage() {
       })
       return
     }
-
-    // CSV header
-    const headers = ['Org ID', 'Байгууллага', 'Төрөл', 'Аймаг', 'Категори', 'Гүйлгээний утга', 'Огноо', 'Төлбөр', 'Төлөв']
-    
-    // CSV rows
-    const rows = filteredRegistrations.map(reg => {
-      const orgId = reg.organisationId 
-        ? (typeof reg.organisationId === 'string' 
-            ? reg.organisationId 
-            : reg.organisationId.organisationId || reg.organisationId._id || '')
-        : ''
-      const orgName = reg.organisationId && typeof reg.organisationId === 'object'
-        ? reg.organisationId.typeDetail || ''
-        : ''
-      const orgType = reg.organisationId && typeof reg.organisationId === 'object'
-        ? reg.organisationId.type || ''
-        : ''
-      const aimag = reg.organisationId && typeof reg.organisationId === 'object'
-        ? reg.organisationId.aimag || ''
-        : ''
-      
-      return [
-        orgId,
-        orgName,
-        orgType,
-        aimag,
-        reg.categoryDisplay || reg.category || '',
-        reg.paymentDescription || '',
-        reg.registeredAt || '',
-        reg.paymentStatus || 'not_uploaded',
-        reg.status || 'pending'
-      ]
-    })
-
-    // Combine headers and rows
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-    ].join('\n')
-
-    // Download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.setAttribute('href', url)
-    link.setAttribute('download', `registrations_${selectedEventId}_${Date.now()}.csv`)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-
-    toast({
-      title: 'Амжилттай',
-      description: 'Бүртгэлүүдийг CSV файл руу экспорт хийлээ',
-    })
+    setCSVExportModalOpen(true)
   }
 
   // Get unique categories from selected event
@@ -466,6 +414,13 @@ export default function RegistrationsPage() {
         organisationName={
           selectedRegistration?.organisationId?.typeDetail || 'N/A'
         }
+      />
+
+      <CSVExportModal
+        open={csvExportModalOpen}
+        onOpenChange={setCSVExportModalOpen}
+        registrations={filteredRegistrations}
+        eventId={selectedEventId}
       />
     </div>
   )
