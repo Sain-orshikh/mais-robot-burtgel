@@ -43,12 +43,8 @@ export const exportContestants = async (req, res) => {
     try {
         const contestants = await Contestant.find()
             .populate({
-                path: "teamId",
-                select: "_id teamName category",
-                populate: {
-                    path: "organisationId",
-                    select: "_id typeDetail"
-                }
+                path: "organisationId",
+                select: "_id typeDetail"
             });
 
         res.json(contestants);
@@ -62,10 +58,6 @@ export const exportContestants = async (req, res) => {
 export const exportCoaches = async (req, res) => {
     try {
         const coaches = await Coach.find()
-            .populate({
-                path: "teamIds",
-                select: "_id teamName"
-            })
             .populate({
                 path: "organisationId",
                 select: "_id typeDetail"

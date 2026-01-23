@@ -36,30 +36,29 @@ const TEAMS_FIELDS = [
 ]
 
 const CONTESTANTS_FIELDS = [
-  { id: 'contestantId', label: 'Contestant ID', key: '_id' },
-  { id: 'firstName', label: 'First Name', key: 'firstName' },
-  { id: 'lastName', label: 'Last Name', key: 'lastName' },
+  { id: 'contestantId', label: 'Contestant ID', key: 'contestantId' },
+  { id: 'ner', label: 'First Name', key: 'ner' },
+  { id: 'ovog', label: 'Last Name', key: 'ovog' },
   { id: 'email', label: 'Email', key: 'email' },
-  { id: 'phone', label: 'Phone', key: 'phone' },
-  { id: 'teamId', label: 'Team ID', key: 'teamId' },
-  { id: 'teamName', label: 'Team Name', key: 'teamName' },
-  { id: 'category', label: 'Category', key: 'category' },
+  { id: 'phoneNumber', label: 'Phone', key: 'phoneNumber' },
+  { id: 'register', label: 'Registration ID', key: 'register' },
+  { id: 'gender', label: 'Gender', key: 'gender' },
+  { id: 'tursunUdur', label: 'Date of Birth', key: 'tursunUdur' },
   { id: 'organisation', label: 'Organisation', key: 'organisationName' },
-  { id: 'registrationStatus', label: 'Registration Status', key: 'registrationStatus' },
-  { id: 'registeredAt', label: 'Registered Date', key: 'registeredAt' },
+  { id: 'participationCount', label: 'Number of Participations', key: 'participationCount' },
 ]
 
 const COACHES_FIELDS = [
-  { id: 'coachId', label: 'Coach ID', key: '_id' },
-  { id: 'firstName', label: 'First Name', key: 'firstName' },
-  { id: 'lastName', label: 'Last Name', key: 'lastName' },
+  { id: 'coachId', label: 'Coach ID', key: 'coachId' },
+  { id: 'ner', label: 'First Name', key: 'ner' },
+  { id: 'ovog', label: 'Last Name', key: 'ovog' },
   { id: 'email', label: 'Email', key: 'email' },
-  { id: 'phone', label: 'Phone', key: 'phone' },
-  { id: 'teams', label: 'Teams Coached', key: 'teams' },
-  { id: 'teamCount', label: 'Number of Teams', key: 'teamCount' },
+  { id: 'phoneNumber', label: 'Phone', key: 'phoneNumber' },
+  { id: 'register', label: 'Registration ID', key: 'register' },
+  { id: 'gender', label: 'Gender', key: 'gender' },
+  { id: 'tursunUdur', label: 'Date of Birth', key: 'tursunUdur' },
   { id: 'organisation', label: 'Organisation', key: 'organisationName' },
-  { id: 'qualifications', label: 'Qualifications', key: 'qualifications' },
-  { id: 'yearsExperience', label: 'Years of Experience', key: 'yearsExperience' },
+  { id: 'participationCount', label: 'Number of Participations', key: 'participationCount' },
 ]
 
 const ORGANISATIONS_FIELDS = [
@@ -103,7 +102,9 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
         switch (exportType) {
           case 'teams':
             if (allTeams.length === 0) {
-              const res = await fetch('/api/export/teams')
+              const res = await fetch('https://mais-robot-burtgel.onrender.com/api/export/teams', {
+                credentials: 'include',
+              })
               if (res.ok) {
                 const data = await res.json()
                 setAllTeams(data)
@@ -112,7 +113,9 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
             break
           case 'contestants':
             if (allContestants.length === 0) {
-              const res = await fetch('/api/export/contestants')
+              const res = await fetch('https://localhost:5000/api/export/contestants', {
+                credentials: 'include',
+              })
               if (res.ok) {
                 const data = await res.json()
                 setAllContestants(data)
@@ -121,7 +124,9 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
             break
           case 'coaches':
             if (allCoaches.length === 0) {
-              const res = await fetch('/api/export/coaches')
+              const res = await fetch('https://localhost:5000/api/export/coaches', {
+                credentials: 'include',
+              })
               if (res.ok) {
                 const data = await res.json()
                 setAllCoaches(data)
@@ -130,7 +135,9 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
             break
           case 'organisations':
             if (allOrganisations.length === 0) {
-              const res = await fetch('/api/export/organisations')
+              const res = await fetch('https://mais-robot-burtgel.onrender.com/api/export/organisations', {
+                credentials: 'include',
+              })
               if (res.ok) {
                 const data = await res.json()
                 setAllOrganisations(data)
@@ -255,24 +262,24 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
         break
 
       case 'contestants':
-        // Use fetched contestants data with team info lookup
+        // Use fetched contestants data
         if (allContestants.length > 0) {
           exportData = allContestants.map(contestant => {
-            // Find team info if available
-            const team = allTeams.find(t => t._id === contestant.teamId || t._id === contestant.team_id)
+            const orgName = typeof contestant.organisationId === 'object' 
+              ? (contestant.organisationId.typeDetail || contestant.organisationId.name || '') 
+              : ''
             
             return {
-              _id: contestant._id || '',
-              firstName: contestant.firstName || contestant.first_name || '',
-              lastName: contestant.lastName || contestant.last_name || '',
+              contestantId: contestant.contestantId || '',
+              ner: contestant.ner || '',
+              ovog: contestant.ovog || '',
               email: contestant.email || '',
-              phone: contestant.phone || contestant.phone_number || '',
-              teamId: contestant.teamId || contestant.team_id || '',
-              teamName: team?.teamName || team?.team_name || contestant.teamName || '',
-              category: team?.category || team?.categoryDisplay || '',
-              organisationName: typeof team?.organisationId === 'object' ? (team.organisationId.typeDetail || team.organisationId.name || '') : '',
-              registrationStatus: contestant.status || 'pending',
-              registeredAt: contestant.createdAt || contestant.created_at || '',
+              phoneNumber: contestant.phoneNumber || '',
+              register: contestant.register || '',
+              gender: contestant.gender || '',
+              tursunUdur: contestant.tursunUdur || '',
+              organisationName: orgName,
+              participationCount: (contestant.participations && Array.isArray(contestant.participations)) ? contestant.participations.length : 0,
             }
           })
         } else if (registrations.length > 0) {
@@ -318,24 +325,21 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
         // Use fetched coaches data
         if (allCoaches.length > 0) {
           exportData = allCoaches.map(coach => {
-            // Find teams coached
-            const coachTeams = allTeams.filter(t => {
-              const coachId = typeof t.coach === 'object' ? t.coach._id : t.coach
-              return coachId === coach._id
-            })
-            const teamNames = coachTeams.map(t => t.teamName || t.team_name).join(', ')
+            const orgName = typeof coach.organisationId === 'object'
+              ? (coach.organisationId.typeDetail || coach.organisationId.name || '')
+              : ''
             
             return {
-              _id: coach._id || '',
-              firstName: coach.firstName || coach.first_name || '',
-              lastName: coach.lastName || coach.last_name || '',
+              coachId: coach.coachId || '',
+              ner: coach.ner || '',
+              ovog: coach.ovog || '',
               email: coach.email || '',
-              phone: coach.phone || coach.phone_number || '',
-              teams: teamNames,
-              teamCount: coachTeams.length,
-              organisationName: typeof coach.organisationId === 'object' ? (coach.organisationId.typeDetail || coach.organisationId.name || '') : '',
-              qualifications: coach.qualifications || coach.coach_qualifications || '',
-              yearsExperience: coach.yearsExperience || coach.years_experience || '',
+              phoneNumber: coach.phoneNumber || '',
+              register: coach.register || '',
+              gender: coach.gender || '',
+              tursunUdur: coach.tursunUdur || '',
+              organisationName: orgName,
+              participationCount: (coach.participations && Array.isArray(coach.participations)) ? coach.participations.length : 0,
             }
           })
         } else if (registrations.length > 0) {
