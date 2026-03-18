@@ -6,7 +6,9 @@ import {
     getMe,
     updateOrganisation,
     forgotPassword,
-    resetPasswordWithOTP
+    resetPasswordWithOTP,
+    getAllOrganisationsAdmin,
+    deleteOrganisationAdmin,
 } from "../controller/organisation.controller.js";
 import { protectOrganisationRoute } from "../middleware/protectOrganisationRoute.js";
 
@@ -19,5 +21,9 @@ router.post("/forgot-password", forgotPassword);
 router.post("/reset-password-otp", resetPasswordWithOTP);
 router.get("/me", protectOrganisationRoute, getMe);
 router.put("/update", protectOrganisationRoute, updateOrganisation);
+
+// Admin routes
+router.get("/admin/all", getAllOrganisationsAdmin);
+router.delete("/admin/:id", deleteOrganisationAdmin);
 
 export default router;

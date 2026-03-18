@@ -1,4 +1,9 @@
 import Organisation from "../models/organisation.model.js";
+import Contestant from "../models/contestant.model.js";
+import Coach from "../models/coach.model.js";
+import Team from "../models/team.model.js";
+import Event from "../models/event.model.js";
+import Payment from "../models/payment.model.js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { generateTokenAndSetCookie } from "../utils/generateToken.js";
@@ -306,6 +311,81 @@ export const resetPasswordWithOTP = async (req, res) => {
     } catch (error) {
         console.log("Error in resetPasswordWithOTP controller", error.message);
         return res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export const getAllOrganisationsAdmin = async (req, res) => {
+    try {
+        const organisations = await Organisation.find()
+            .select("-password -resetPasswordOTP -resetPasswordOTPExpire")
+            .sort({ createdAt: -1 });
+
+        res.status(200).json(organisations);
+    } catch (error) {
+        console.log("Error in getAllOrganisationsAdmin controller", error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export const deleteOrganisationAdmin = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const organisation = await Organisation.findById(id);
+        if (!organisation) {
+            return res.status(404).json({ error: "Organisation not found" });
+        }
+
+        const hasPayments = await Payment.exists({ organisationId: id });
+        if (hasPayments) {
+            return res.status(400).json({
+                error: "Cannot delete organization with existing payments",
+                code: "HAS_PAYMENTS",
+            });
+        }
+
+        const teams = await Team.find({ organisationId: id }).select("_id");
+        const teamIds = teams.map((team) => team._id);
+
+        await Promise.all([
+            Contestant.deleteMany({ organisationId: id }),
+            Coach.deleteMany({ organisationId: id }),
+            Team.deleteMany({ organisationId: id }),
+            Event.updateMany(
+                {},
+                {
+                    $pull: {
+                        registrations: {
+                            organisationId: id,
+                        },
+                    },
+                }
+            ),
+            teamIds.length > 0
+                ? Event.updateMany(
+                    {},
+                    {
+                        $pull: {
+                            registrations: {
+                                teamIds: { $in: teamIds },
+                            },
+                        },
+                    }
+                )
+                : Promise.resolve(),
+            Organisation.findByIdAndDelete(id),
+        ]);
+
+        res.status(200).json({
+            message: "Organisation and related data deleted successfully",
+            deleted: {
+                organisationId: id,
+                teams: teamIds.length,
+            },
+        });
+    } catch (error) {
+        console.log("Error in deleteOrganisationAdmin controller", error.message);
+        res.status(500).json({ error: "Internal server error" });
     }
 };
 

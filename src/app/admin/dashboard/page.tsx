@@ -2,13 +2,21 @@ import { useState, useEffect } from 'react'
 import { Link as RouterLink, useNavigate } from 'react-router-dom'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { AdminStatsCards } from '@/app/components/admin/AdminStatsCards'
-import { RecentRegistrations } from '@/app/components/admin/RecentRegistrations'
+import { RegistrationsTable } from '@/app/components/admin/RegistrationsTable'
+import { RegistrationFilters } from '@/app/components/admin/RegistrationFilters'
 import { eventApi } from '@/lib/api/events'
-import { teamApi } from '@/lib/api/teams'
-import { paymentApi } from '@/lib/api/payments'
+import { fetchNormalizedRegistrationsForEvent } from '@/lib/api/adminRegistrations'
 import { Button } from '@/components/ui/button'
-import { Users, BarChart3, Calendar } from 'lucide-react'
+import { Users, BarChart3, Calendar, Settings } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
 
 // Compatibility wrapper
 const Link = RouterLink
@@ -27,7 +35,10 @@ export default function AdminDashboard() {
     paymentUploaded: 0,
     paymentNotUploaded: 0
   })
-  const [recentTeams, setRecentTeams] = useState<any[]>([])
+  const [events, setEvents] = useState<any[]>([])
+  const [selectedEventId, setSelectedEventId] = useState<string>('')
+  const [registrations, setRegistrations] = useState<any[]>([])
+  const [filteredRegistrations, setFilteredRegistrations] = useState<any[]>([])
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -35,78 +46,54 @@ export default function AdminDashboard() {
     }
   }, [isAuthenticated])
 
+  useEffect(() => {
+    if (selectedEventId) {
+      void fetchEventRegistrations(selectedEventId)
+    }
+  }, [selectedEventId])
+
   const fetchDashboardData = async () => {
     try {
       setLoading(true)
       
-      // Fetch all events and then load each event with populated registrations
       const events = await eventApi.getAll()
+      setEvents(events)
+      if (events.length > 0 && !selectedEventId) {
+        setSelectedEventId(events[0]._id)
+      }
 
       const populatedEvents = await Promise.all(
         events.map((event: any) => eventApi.getById(event._id))
       )
 
-      // Extract all registrations from all events (populated org/coach/contestants)
       const allRegistrations = populatedEvents.flatMap((event: any) =>
         (event.registrations || []).map((reg: any) => ({
           ...reg,
           eventId: event._id,
           eventName: event.name,
-          paymentStatus: reg.paymentStatus || 'not_uploaded'
         }))
       )
-      
-      // Fetch all teams to get actual team data
-      const teamPromises = events.map(event => 
-        fetch(`${import.meta.env.VITE_API_URL}/api/teams/event/${event._id}`, {
-          credentials: 'include'
-        }).then(res => res.ok ? res.json() : []).catch(() => [])
-      )
-      
-      const teamsArrays = await Promise.all(teamPromises)
-      const allTeams = teamsArrays.flat()
-      
-      // Calculate stats
-      const totalTeams = allTeams.length
-      const activeTeams = allTeams.filter((t: any) => t.status === 'active')
-      const deletedTeams = allTeams.filter((t: any) => t.status === 'deleted')
-      
-      // Get all payments
+
       const paymentResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/payments/admin/all`, {
         credentials: 'include'
       })
       const allPayments = paymentResponse.ok ? await paymentResponse.json() : []
-      
-      // Calculate payment stats
-      const verifiedPayments = allPayments.filter((p: any) => p.status === 'verified').length
+
+      const verifiedPayments = allPayments.filter((p: any) => p.status === 'approved').length
       const pendingPayments = allPayments.filter((p: any) => p.status === 'pending').length
-      
-      // Count teams without payment (teams that don't have a teamId in any payment)
-      const teamsWithPayment = new Set()
-      allPayments.forEach((payment: any) => {
-        payment.teamIds?.forEach((teamId: any) => {
-          teamsWithPayment.add(teamId.toString())
-        })
-      })
-      const teamsWithoutPayment = activeTeams.filter((t: any) => 
-        !teamsWithPayment.has(t._id.toString())
-      ).length
+      const approvedCount = allRegistrations.filter((reg: any) => reg.status === 'approved').length
+      const rejectedCount = allRegistrations.filter((reg: any) => reg.status === 'rejected').length
+      const teamsWithoutPayment = allRegistrations.filter((reg: any) => !reg.paymentId).length
       
       setStats({
         total: allRegistrations.length,
         pending: pendingPayments,
-        approved: activeTeams.length,
-        rejected: deletedTeams.length,
+        approved: approvedCount,
+        rejected: rejectedCount,
         paymentVerified: verifiedPayments,
         paymentUploaded: pendingPayments,
         paymentNotUploaded: teamsWithoutPayment
       })
-      
-      // Get recent registrations (last 10)
-      const sortedRegs = allRegistrations
-        .sort((a: any, b: any) => new Date(b.registeredAt).getTime() - new Date(a.registeredAt).getTime())
-        .slice(0, 10)
-      setRecentTeams(sortedRegs)
       
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
@@ -119,6 +106,23 @@ export default function AdminDashboard() {
       setLoading(false)
     }
   }
+
+  const fetchEventRegistrations = async (eventId: string) => {
+    try {
+      const { registrations } = await fetchNormalizedRegistrationsForEvent(eventId)
+      setRegistrations(registrations)
+      setFilteredRegistrations(registrations)
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to load registrations',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const selectedEvent = events.find((event) => event._id === selectedEventId)
+  const categories = selectedEvent?.categories?.map((category: any) => category.name) || []
 
   // Show loading state while checking authentication
   if (isChecking || !isAuthenticated) {
@@ -169,6 +173,12 @@ export default function AdminDashboard() {
               Статистик
             </Link>
           </Button>
+          <Button asChild variant='outline' className='gap-2'>
+            <Link to='/admin/settings'>
+              <Settings size={20} />
+              Тохиргоо
+            </Link>
+          </Button>
         </div>
 
         {/* Stats Cards - Now includes 8th countdown card */}
@@ -176,13 +186,52 @@ export default function AdminDashboard() {
           <AdminStatsCards stats={stats} />
         </div>
 
-        <div className='grid grid-cols-1 gap-6'>
-          <RecentRegistrations
-            registrations={recentTeams}
-            limit={8}
-            onViewDetails={() => navigate('/admin/registrations')}
-          />
+        <div className='mb-6 p-4 bg-card rounded-lg border'>
+          <div className='flex items-center gap-4'>
+            <div className='flex-1 max-w-md'>
+              <Label htmlFor='event-select' className='text-sm font-medium mb-2 block'>
+                Тэмцээн сонгох
+              </Label>
+              <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+                <SelectTrigger id='event-select'>
+                  <SelectValue placeholder='Тэмцээн сонгоно уу' />
+                </SelectTrigger>
+                <SelectContent>
+                  {events.map((event) => (
+                    <SelectItem key={event._id} value={event._id}>
+                      {event.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {selectedEvent && (
+              <div className='text-sm text-muted-foreground'>
+                <p>Нийт бүртгэл: <span className='font-semibold text-foreground'>{registrations.length}</span></p>
+                <p>Шүүлтсэн: <span className='font-semibold text-foreground'>{filteredRegistrations.length}</span></p>
+              </div>
+            )}
+          </div>
         </div>
+
+        {selectedEventId ? (
+          <div className='space-y-4'>
+            <RegistrationFilters
+              registrations={registrations}
+              categories={categories}
+              onFilteredResults={setFilteredRegistrations}
+            />
+
+            <RegistrationsTable
+              registrations={filteredRegistrations}
+              onViewDetails={() => navigate('/admin/registrations')}
+            />
+          </div>
+        ) : (
+          <div className='text-center py-12 text-muted-foreground'>
+            <p>Тэмцээн сонгоно уу</p>
+          </div>
+        )}
       </main>
     </div>
   )

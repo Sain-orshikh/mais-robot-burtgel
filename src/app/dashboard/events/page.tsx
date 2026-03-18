@@ -57,7 +57,7 @@ export default function EventsPage() {
             {/* Event Image/Icon */}
             <div className='h-48 flex items-center justify-center overflow-hidden'>
               <img 
-                src='/icons/12.jpg' 
+                src={event.imageUrl || '/icons/12.jpg'} 
                 alt={event.name}
                 className='w-full h-full object-cover'
               />

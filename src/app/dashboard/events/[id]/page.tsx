@@ -23,38 +23,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-// Category code mapping for matching event categories with codes
-const CATEGORY_CODE_MAP: { [key: string]: string } = {
-  'Mini Sumo RC': 'MNR',
-  'Mega Sumo RC': 'MGR',
-  'Mini Sumo Auto': 'MNA',
-  'Mega Sumo Auto': 'MGA',
-  'Robot Rugby': 'RRC',
-  'Drone RC': 'DRC',
-  'Drone Auto': 'DRA',
-  'Line Follower (Lego)': 'LFG',
-  'Line Follower (High Speed)': 'LFH',
-  'Line Follower (Low Speed)': 'LFL',
-  'Lego Sumo': 'LSR',
-  'Lego Unknown': 'LUR',
-}
-
-// Backend category configuration (source of truth for rules)
-const BACKEND_CATEGORY_CONFIG: { [key: string]: { maxTeamsPerOrg: number, minContestants: number, maxContestants: number } } = {
-  'MNR': { maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
-  'MGR': { maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
-  'MNA': { maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
-  'MGA': { maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
-  'RRC': { maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 4 },
-  'DRC': { maxTeamsPerOrg: 5, minContestants: 1, maxContestants: 2 },
-  'DRA': { maxTeamsPerOrg: 5, minContestants: 1, maxContestants: 2 },
-  'LFG': { maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
-  'LFH': { maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
-  'LFL': { maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
-  'LSR': { maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 2 },
-  'LUR': { maxTeamsPerOrg: 10, minContestants: 1, maxContestants: 3 },
-}
-
 export default function EventDetailPage() {
   const navigate = useNavigate()
   const { id: eventId } = useParams<{ id: string }>()
@@ -83,20 +51,13 @@ export default function EventDetailPage() {
   // Payment state
   const [showPaymentModal, setShowPaymentModal] = useState(false)
 
-  // Map event categories to include codes and use backend config as source of truth
-  const eventCategories = event?.categories.map(cat => {
-    const code = CATEGORY_CODE_MAP[cat.name] || ''
-    const backendConfig = BACKEND_CATEGORY_CONFIG[code]
-    
-    return {
-      code,
-      name: cat.name,
-      // Use backend config if available, otherwise fall back to event data
-      maxTeamsPerOrg: backendConfig?.maxTeamsPerOrg || cat.maxTeamsPerOrg,
-      minContestants: backendConfig?.minContestants || cat.minContestantsPerTeam,
-      maxContestants: backendConfig?.maxContestants || cat.maxContestantsPerTeam,
-    }
-  }) || []
+  const eventCategories = event?.categories.map((cat: any) => ({
+    code: cat.categoryCode || cat.name,
+    name: cat.name,
+    maxTeamsPerOrg: cat.maxTeamsPerOrg,
+    minContestants: cat.minContestantsPerTeam,
+    maxContestants: cat.maxContestantsPerTeam,
+  })) || []
 
   const lockedContestants = useMemo(() => {
     if (!selectedCategory) return new Set<string>()

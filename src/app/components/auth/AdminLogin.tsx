@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert } from '@/components/ui/alert'
+import { usePublicSettings } from '@/hooks/usePublicSettings'
 
 export const AdminLogin = () => {
   const navigate = useNavigate()
@@ -13,6 +14,7 @@ export const AdminLogin = () => {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const { settings } = usePublicSettings()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -50,7 +52,11 @@ export const AdminLogin = () => {
         <div className='md:min-w-[450px] min-w-max'>
           <CardBox>
             <div className='flex justify-center mb-4'>
-              <div className='text-4xl font-bold text-primary'>MAIS</div>
+              <img
+                src={settings.loginLogoUrl || '/icons/12.jpg'}
+                alt='MAIS logo'
+                className='w-28 h-28 object-contain rounded-lg'
+              />
             </div>
             <h2 className='text-2xl font-bold text-center mb-2'>
               Админ Удирдлагын Систем

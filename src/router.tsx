@@ -25,6 +25,7 @@ import AdminEventsPage from '@/app/admin/events/page'
 import AdminRegistrationsPage from '@/app/admin/registrations/page'
 import AdminAnalyticsPage from '@/app/admin/analytics/page'
 import AdminAuditLogPage from '@/app/admin/audit-log/page'
+import AdminSettingsPage from '@/app/admin/settings/page'
 import AdminLayout from '@/app/admin/layout'
 
 // Protected route wrapper
@@ -171,6 +172,16 @@ export function AppRoutes() {
           <ProtectedRoute requireAdmin>
             <AdminLayout>
               <AdminAuditLogPage />
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/settings"
+        element={
+          <ProtectedRoute requireAdmin>
+            <AdminLayout>
+              <AdminSettingsPage />
             </AdminLayout>
           </ProtectedRoute>
         }

@@ -7,7 +7,7 @@ import Payment from "../models/payment.model.js";
 // Create a new event (Admin only - would need admin middleware)
 export const createEvent = async (req, res) => {
     try {
-        const { name, description, startDate, endDate, registrationStart, registrationEnd, location, categories } = req.body;
+        const { name, description, startDate, endDate, registrationStart, registrationEnd, location, categories, imageUrl } = req.body;
 
         if (!name || !description || !startDate || !endDate || !registrationStart || !registrationEnd || !location || !categories) {
             return res.status(400).json({ error: "All fields are required" });
@@ -22,6 +22,7 @@ export const createEvent = async (req, res) => {
             registrationEnd,
             location,
             categories,
+            imageUrl: imageUrl || '/icons/12.jpg',
         });
 
         await event.save();
@@ -94,7 +95,9 @@ export const registerTeam = async (req, res) => {
         }
 
         // Find the category in the event
-        const eventCategory = event.categories.find(cat => cat.name === category);
+        const eventCategory = event.categories.find(
+            (cat) => cat.name === category || cat.categoryCode === category
+        );
         if (!eventCategory) {
             return res.status(400).json({ error: "Category not found in this event" });
         }
@@ -109,7 +112,10 @@ export const registerTeam = async (req, res) => {
 
         // Check if org has reached max teams for this category
         const existingTeams = event.registrations.filter(
-            reg => reg.organisationId.toString() === organisationId.toString() && reg.category === category && reg.status !== 'rejected'
+            (reg) =>
+                reg.organisationId.toString() === organisationId.toString() &&
+                (reg.category === category || reg.category === eventCategory.name || reg.category === eventCategory.categoryCode) &&
+                reg.status !== 'rejected'
         );
 
         if (existingTeams.length >= eventCategory.maxTeamsPerOrg) {
@@ -141,7 +147,7 @@ export const registerTeam = async (req, res) => {
         // Add registration to event
         event.registrations.push({
             organisationId,
-            category,
+            category: eventCategory.categoryCode || eventCategory.name,
             contestantIds,
             coachId,
         });
@@ -200,6 +206,11 @@ export const updateEvent = async (req, res) => {
     try {
         const { id } = req.params;
         const updates = req.body;
+
+        // Keep existing image if not provided
+        if (typeof updates.imageUrl === "undefined") {
+            delete updates.imageUrl;
+        }
 
         const event = await Event.findByIdAndUpdate(id, updates, { new: true });
 

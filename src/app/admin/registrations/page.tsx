@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft, Download, RefreshCw } from 'lucide-react'
 import { Link as RouterLink } from 'react-router-dom'
 import { useToast } from '@/hooks/use-toast'
+import { fetchNormalizedRegistrationsForEvent } from '@/lib/api/adminRegistrations'
 
 const Link = RouterLink
 import {
@@ -76,68 +77,7 @@ export default function RegistrationsPage() {
     
     try {
       setLoading(true)
-      
-      // Fetch the selected event with populated organisationId
-      const event = await eventApi.getById(selectedEventId)
-
-      // Fetch payments for mapping payment status
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
-      const paymentsResponse = await fetch(`${apiUrl}/api/payments/admin/all`, {
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
-      const payments = paymentsResponse.ok ? await paymentsResponse.json() : []
-      const paymentStatusMap = new Map(
-        payments.map((p: any) => [String(p._id), p.status])
-      )
-
-      const getOrgIdString = (orgId: any): string => {
-        if (!orgId) return 'N/A'
-        if (typeof orgId === 'string') return orgId
-        return orgId.organisationId || orgId._id || String(orgId)
-      }
-
-      const paymentsForEvent = payments.filter((p: any) => String(p.eventId?._id || p.eventId) === String(event._id))
-      const paymentsByOrg = new Map<string, any[]>()
-
-      paymentsForEvent.forEach((payment: any) => {
-        const orgKey = getOrgIdString(payment.organisationId)
-        const current = paymentsByOrg.get(orgKey) || []
-        current.push(payment)
-        paymentsByOrg.set(orgKey, current)
-      })
-
-      const paymentDescriptionMap = new Map<string, string>()
-      paymentsByOrg.forEach((orgPayments, orgKey) => {
-        orgPayments
-          .sort((a, b) => new Date(a.submittedAt || a.createdAt || 0).getTime() - new Date(b.submittedAt || b.createdAt || 0).getTime())
-          .forEach((payment: any, index: number) => {
-            const paymentNumber = String(index + 1).padStart(3, '0')
-            paymentDescriptionMap.set(String(payment._id), `${orgKey}-${paymentNumber}`)
-          })
-      })
-      
-      // Extract registrations from the event
-      // The organisationId should be populated by the backend
-      const regs = (event.registrations || []).map((reg: any) => ({
-        ...reg,
-        eventId: event._id,
-        eventName: event.name,
-        categoryDisplay: Array.isArray(reg.categories) && reg.categories.length > 0
-          ? (reg.categories.length > 1
-              ? `${reg.categories.join(', ')} (${reg.categories.length})`
-              : reg.categories[0])
-          : (reg.category || 'N/A'),
-        // Payment status from payment record if linked
-        paymentStatus: reg.paymentId
-          ? (paymentStatusMap.get(String(reg.paymentId)) || 'not_uploaded')
-          : 'not_uploaded',
-        paymentDescription: reg.paymentId
-          ? (paymentDescriptionMap.get(String(reg.paymentId)) || 'N/A')
-          : 'N/A'
-      }))
+      const { registrations: regs } = await fetchNormalizedRegistrationsForEvent(selectedEventId)
       
       setRegistrations(regs)
       setFilteredRegistrations(regs)

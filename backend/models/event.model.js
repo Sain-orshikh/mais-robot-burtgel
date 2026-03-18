@@ -30,8 +30,16 @@ const eventSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
+        imageUrl: {
+            type: String,
+            default: '/icons/12.jpg',
+        },
         categories: [
             {
+                categoryCode: {
+                    type: String,
+                    required: true,
+                },
                 name: {
                     type: String,
                     required: true,

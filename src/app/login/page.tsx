@@ -10,11 +10,13 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/use-toast'
 import { ThemeToggle } from '@/app/components/shared/ThemeToggle'
+import { usePublicSettings } from '@/hooks/usePublicSettings'
 
 export default function LoginPage() {
   const navigate = useNavigate()
   const { login } = useAuth()
   const { toast } = useToast()
+  const { settings } = usePublicSettings()
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
@@ -60,7 +62,7 @@ export default function LoginPage() {
         <CardHeader className='space-y-4 pb-4'>
           <div className='flex justify-center'>
             <img 
-              src='/icons/12.jpg' 
+              src={settings.loginLogoUrl || '/icons/12.jpg'} 
               alt='Logo'
               className='w-32 h-32 object-contain rounded-lg'
             />

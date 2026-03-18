@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import type { ChangeEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,24 +22,11 @@ import {
 } from '@/components/ui/table'
 import { Plus, Edit, Trash2, Calendar } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { settingsApi, AdminCategory } from '@/lib/api/settings'
+import { useNavigate } from 'react-router-dom'
+import { uploadToCloudinary } from '@/lib/cloudinary'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
-
-// 12 competition categories
-const AVAILABLE_CATEGORIES = [
-  { code: 'MNR', name: 'Mini Sumo RC', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'MGR', name: 'Mega Sumo RC', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'MNA', name: 'Mini Sumo Auto', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'MGA', name: 'Mega Sumo Auto', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'RRC', name: 'Robot Rugby', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'DRC', name: 'Drone RC', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'DRA', name: 'Drone Auto', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'LFG', name: 'Line Follower (Lego)', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'LFH', name: 'Line Follower (High Speed)', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'LFL', name: 'Line Follower (Low Speed)', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'LSR', name: 'Lego Sumo', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'LUR', name: 'Lego Unknown', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-]
 
 interface Event {
   _id: string
@@ -49,6 +37,7 @@ interface Event {
   registrationStart: string
   registrationEnd: string
   location: string
+  imageUrl?: string
   status?: 'upcoming' | 'registration-open' | 'registration-closed' | 'ongoing' | 'completed'
   categories: {
     categoryCode: string
@@ -61,11 +50,14 @@ interface Event {
 
 export default function AdminEventsPage() {
   const { toast } = useToast()
+  const navigate = useNavigate()
   const [events, setEvents] = useState<Event[]>([])
+  const [availableCategories, setAvailableCategories] = useState<AdminCategory[]>([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
   const [saving, setSaving] = useState(false)
+  const [imageUploading, setImageUploading] = useState(false)
 
   // Helper to convert stored date to local date/time parts (no manual timezone offset)
   const toLocalDateTime = (dateStr: string) => {
@@ -153,6 +145,7 @@ export default function AdminEventsPage() {
     registrationEndTime: '11:59',
     registrationEndAMPM: 'PM',
     location: '',
+    imageUrl: '',
     selectedCategories: [] as string[],
   })
 
@@ -162,10 +155,16 @@ export default function AdminEventsPage() {
 
   const fetchEvents = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/events`)
-      if (!response.ok) throw new Error('Failed to fetch events')
-      const data = await response.json()
+      const [eventResponse, settingsResponse] = await Promise.all([
+        fetch(`${API_URL}/api/events`),
+        settingsApi.getAdmin(),
+      ])
+
+      if (!eventResponse.ok) throw new Error('Failed to fetch events')
+
+      const data = await eventResponse.json()
       setEvents(data)
+      setAvailableCategories(settingsResponse.availableCategories || [])
     } catch (error) {
       toast({
         title: 'Error',
@@ -195,6 +194,7 @@ export default function AdminEventsPage() {
       registrationEndTime: '11:59',
       registrationEndAMPM: 'PM',
       location: '',
+      imageUrl: '',
       selectedCategories: [],
     })
     setIsModalOpen(true)
@@ -204,11 +204,13 @@ export default function AdminEventsPage() {
     setEditingEvent(event)
     
     // Extract category codes from event categories
-    const categoryCodes = event.categories.map(c => {
-      // Try to find matching category by name if categoryCode is missing
-      const matchingCat = AVAILABLE_CATEGORIES.find(ac => ac.name === c.name)
-      return matchingCat?.code || ''
-    }).filter(Boolean)
+    const categoryCodes = event.categories
+      .map((c) => {
+        if (c.categoryCode) return c.categoryCode
+        const matchingCat = availableCategories.find((ac) => ac.name === c.name)
+        return matchingCat?.categoryCode || ''
+      })
+      .filter(Boolean)
     
     const startDateTime = toLocalDateTime(event.startDate)
     const endDateTime = toLocalDateTime(event.endDate)
@@ -231,6 +233,7 @@ export default function AdminEventsPage() {
       registrationEndTime: regEndDateTime.time,
       registrationEndAMPM: regEndDateTime.ampm,
       location: event.location,
+      imageUrl: event.imageUrl || '',
       selectedCategories: categoryCodes,
     })
     setIsModalOpen(true)
@@ -245,12 +248,54 @@ export default function AdminEventsPage() {
     }))
   }
 
+  const handleEventImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: 'File too large',
+        description: 'Please select an image under 5MB',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setImageUploading(true)
+    try {
+      const imageUrl = await uploadToCloudinary(file)
+      setFormData((prev) => ({ ...prev, imageUrl }))
+      toast({
+        title: 'Image uploaded',
+        description: 'Event image uploaded to cloud successfully.',
+      })
+    } catch (error) {
+      toast({
+        title: 'Upload failed',
+        description: error instanceof Error ? error.message : 'Failed to upload image',
+        variant: 'destructive',
+      })
+    } finally {
+      setImageUploading(false)
+      e.target.value = ''
+    }
+  }
+
   const handleSaveEvent = async () => {
     if (!formData.name || !formData.description || !formData.startDate || 
         !formData.endDate || !formData.registrationStartDate || !formData.registrationEndDate || !formData.location) {
       toast({
         title: 'Validation Error',
         description: 'Please fill in all required fields',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (availableCategories.length === 0) {
+      toast({
+        title: 'No categories configured',
+        description: 'Please configure categories first in admin settings.',
         variant: 'destructive',
       })
       return
@@ -277,13 +322,13 @@ export default function AdminEventsPage() {
     setSaving(true)
     try {
       const categories = formData.selectedCategories.map(code => {
-        const cat = AVAILABLE_CATEGORIES.find(c => c.code === code)!
+        const cat = availableCategories.find(c => c.categoryCode === code)!
         return {
-          categoryCode: cat.code,
+          categoryCode: cat.categoryCode,
           name: cat.name,
           maxTeamsPerOrg: cat.maxTeamsPerOrg,
-          minContestantsPerTeam: cat.minContestants,
-          maxContestantsPerTeam: cat.maxContestants,
+          minContestantsPerTeam: cat.minContestantsPerTeam,
+          maxContestantsPerTeam: cat.maxContestantsPerTeam,
         }
       })
 
@@ -295,6 +340,7 @@ export default function AdminEventsPage() {
         registrationStart: toLocalISO(formData.registrationStartDate, formData.registrationStartTime, formData.registrationStartAMPM),
         registrationEnd: toLocalISO(formData.registrationEndDate, formData.registrationEndTime, formData.registrationEndAMPM),
         location: formData.location,
+        imageUrl: formData.imageUrl || '/icons/12.jpg',
         categories,
       }
 
@@ -379,10 +425,15 @@ export default function AdminEventsPage() {
             <h1 className='text-2xl font-bold text-gray-800'>Event Management</h1>
             <p className='text-sm text-gray-600 mt-1'>Create and manage competition events</p>
           </div>
-          <Button className='bg-blue-500 hover:bg-blue-600' onClick={openAddModal}>
-            <Plus size={18} className='mr-2' />
-            Add Event
-          </Button>
+          <div className='flex items-center gap-2'>
+            <Button variant='outline' onClick={() => navigate('/admin/settings')}>
+              Manage Categories
+            </Button>
+            <Button className='bg-blue-500 hover:bg-blue-600' onClick={openAddModal}>
+              <Plus size={18} className='mr-2' />
+              Add Event
+            </Button>
+          </div>
         </div>
 
         <div className='bg-white rounded-lg shadow'>
@@ -516,6 +567,30 @@ export default function AdminEventsPage() {
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                   placeholder='e.g., Ulaanbaatar, Mongolia'
                 />
+              </div>
+
+              <div className='grid gap-2'>
+                <Label htmlFor='imageUrl'>Event Image URL</Label>
+                <Input
+                  id='imageUrl'
+                  value={formData.imageUrl}
+                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                  placeholder='https://example.com/event-banner.jpg'
+                />
+                <Input
+                  type='file'
+                  accept='image/*'
+                  onChange={handleEventImageUpload}
+                  disabled={imageUploading}
+                />
+                <p className='text-xs text-gray-500'>
+                  {imageUploading ? 'Uploading image to cloud...' : 'Upload an image file to Cloudinary or paste an image URL manually.'}
+                </p>
+                {formData.imageUrl && (
+                  <div className='w-full h-36 border rounded-md overflow-hidden bg-muted'>
+                    <img src={formData.imageUrl} alt='Event preview' className='w-full h-full object-cover' />
+                  </div>
+                )}
               </div>
 
               {/* Registration Period */}
@@ -680,7 +755,7 @@ export default function AdminEventsPage() {
                       size='sm'
                       onClick={() => setFormData({ 
                         ...formData, 
-                        selectedCategories: AVAILABLE_CATEGORIES.map(c => c.code) 
+                        selectedCategories: availableCategories.map(c => c.categoryCode) 
                       })}
                     >
                       Select All
@@ -700,27 +775,30 @@ export default function AdminEventsPage() {
                 </div>
                 <p className='text-sm text-gray-600 mb-2'>Select categories available for this event</p>
                 <div className='grid grid-cols-2 gap-3 border rounded-lg p-4 max-h-60 overflow-y-auto'>
-                  {AVAILABLE_CATEGORIES.map((category) => (
-                    <div key={category.code} className='flex items-start space-x-2'>
+                  {availableCategories.map((category) => (
+                    <div key={category.categoryCode} className='flex items-start space-x-2'>
                       <Checkbox
-                        id={`cat-${category.code}`}
-                        checked={formData.selectedCategories.includes(category.code)}
-                        onCheckedChange={() => handleCategoryToggle(category.code)}
+                        id={`cat-${category.categoryCode}`}
+                        checked={formData.selectedCategories.includes(category.categoryCode)}
+                        onCheckedChange={() => handleCategoryToggle(category.categoryCode)}
                       />
                       <Label
-                        htmlFor={`cat-${category.code}`}
+                        htmlFor={`cat-${category.categoryCode}`}
                         className='cursor-pointer font-normal text-sm'
                       >
                         <div className='font-medium'>{category.name}</div>
                         <div className='text-xs text-gray-500'>
-                          {category.code} • {category.minContestants}-{category.maxContestants} contestants
+                          {category.categoryCode} • {category.minContestantsPerTeam}-{category.maxContestantsPerTeam} contestants
                         </div>
                       </Label>
                     </div>
                   ))}
                 </div>
+                {availableCategories.length === 0 && (
+                  <p className='text-sm text-amber-600'>No categories configured. Please add categories in Admin Settings.</p>
+                )}
                 <p className='text-sm text-gray-500'>
-                  Selected: {formData.selectedCategories.length} / {AVAILABLE_CATEGORIES.length}
+                  Selected: {formData.selectedCategories.length} / {availableCategories.length}
                 </p>
               </div>
             </div>

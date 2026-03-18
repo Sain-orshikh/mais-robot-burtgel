@@ -3,7 +3,6 @@ import Contestant from "../models/contestant.model.js";
 import Coach from "../models/coach.model.js";
 import Event from "../models/event.model.js";
 import { getNextTeamId } from "../utils/generateIds.js";
-import { EVENT_CATEGORIES } from "../config/categories.js";
 
 // Create a new team and register for event
 export const createTeam = async (req, res) => {
@@ -31,17 +30,19 @@ export const createTeam = async (req, res) => {
             return res.status(400).json({ error: "Registration has ended" });
         }
 
-        // Get category configuration
-        const categoryConfig = EVENT_CATEGORIES.find(cat => cat.code === categoryCode);
-        if (!categoryConfig) {
-            return res.status(400).json({ error: "Invalid category code" });
+        // Resolve category and constraints from this event's configured categories
+        const eventCategory = event.categories.find(
+            (cat) => cat.categoryCode === categoryCode || cat.name === categoryCode
+        );
+        if (!eventCategory) {
+            return res.status(400).json({ error: "Invalid category for this event" });
         }
 
         // Check team size constraints
-        if (contestantIds.length < categoryConfig.minContestantsPerTeam || 
-            contestantIds.length > categoryConfig.maxContestantsPerTeam) {
+        if (contestantIds.length < eventCategory.minContestantsPerTeam || 
+            contestantIds.length > eventCategory.maxContestantsPerTeam) {
             return res.status(400).json({ 
-                error: `Team must have between ${categoryConfig.minContestantsPerTeam} and ${categoryConfig.maxContestantsPerTeam} contestants` 
+                error: `Team must have between ${eventCategory.minContestantsPerTeam} and ${eventCategory.maxContestantsPerTeam} contestants` 
             });
         }
 
@@ -60,9 +61,9 @@ export const createTeam = async (req, res) => {
             _id: rejectedTeamIds.length > 0 ? { $nin: rejectedTeamIds } : { $exists: true },
         });
 
-        if (existingTeams >= categoryConfig.maxTeamsPerOrg) {
+        if (existingTeams >= eventCategory.maxTeamsPerOrg) {
             return res.status(400).json({ 
-                error: `Maximum ${categoryConfig.maxTeamsPerOrg} team(s) per organization for this category` 
+                error: `Maximum ${eventCategory.maxTeamsPerOrg} team(s) per organization for this category` 
             });
         }
 
@@ -95,7 +96,7 @@ export const createTeam = async (req, res) => {
             organisationId,
             eventId,
             categoryCode,
-            categoryName: categoryConfig.name,
+            categoryName: eventCategory.name,
             robotName,
             contestantIds,
             coachId,

@@ -72,7 +72,9 @@ export interface Event {
   registrationStart: string
   registrationEnd: string
   location: string
+  imageUrl?: string
   categories: {
+    categoryCode?: string
     name: string
     description?: string
     maxTeamsPerOrg: number

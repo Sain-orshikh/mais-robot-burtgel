@@ -20,7 +20,6 @@ const teamSchema = new mongoose.Schema(
         categoryCode: {
             type: String,
             required: true,
-            enum: ['MNR', 'MGR', 'MNA', 'MGA', 'RRC', 'DRC', 'DRA', 'LFG', 'LFH', 'LFL', 'LSR', 'LUR'],
         },
         categoryName: {
             type: String,

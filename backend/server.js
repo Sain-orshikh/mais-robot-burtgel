@@ -15,6 +15,7 @@ import eventRoutes from "./routes/event.route.js";
 import teamRoutes from "./routes/team.route.js";
 import paymentRoutes from "./routes/payment.route.js";
 import exportRoutes from "./routes/export.route.js";
+import systemSettingsRoutes from "./routes/systemSettings.route.js";
 import connectMongoDB from "./db/connectMongoDB.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -73,6 +74,7 @@ app.use('/api/events', eventRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/export', exportRoutes);
+app.use('/api/settings', systemSettingsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

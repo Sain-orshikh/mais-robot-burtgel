@@ -9,6 +9,7 @@ import { Upload, Building2, CreditCard, FileText } from 'lucide-react'
 import { uploadToCloudinary } from '@/lib/cloudinary'
 import { useToast } from '@/hooks/use-toast'
 import heic2any from 'heic2any'
+import { usePublicSettings } from '@/hooks/usePublicSettings'
 
 interface PaymentModalProps {
   isOpen: boolean
@@ -35,11 +36,11 @@ export function PaymentModal({
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string>('')
   const [uploading, setUploading] = useState(false)
+  const { settings } = usePublicSettings()
   
-  // Get bank details from environment variables
-  const bankName = import.meta.env.VITE_BANK_NAME || 'Bank Name'
-  const accountName = import.meta.env.VITE_BANK_ACCOUNT_NAME || 'Account Name'
-  const accountNumber = import.meta.env.VITE_BANK_ACCOUNT_NUMBER || ''
+  const bankName = settings.bankName
+  const accountName = settings.bankAccountName
+  const accountNumber = settings.bankAccountNumber
   
   // Format payment number with leading zeros (e.g., 001, 002, 003)
   const paymentNumber = String(paymentCount).padStart(3, '0')
