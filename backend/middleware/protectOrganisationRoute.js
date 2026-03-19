@@ -25,6 +25,11 @@ export const protectOrganisationRoute = async (req, res, next) => {
         next();
     } catch (error) {
         console.log("Error in protectOrganisationRoute middleware", error.message);
+
+        if (error.name === "TokenExpiredError" || error.name === "JsonWebTokenError") {
+            return res.status(401).json({ error: "Unauthorized: Invalid or expired token" });
+        }
+
         return res.status(500).json({ error: "Internal Server Error" });
     }
 };

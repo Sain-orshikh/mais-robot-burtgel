@@ -58,9 +58,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (response.ok) {
         const data = await response.json()
         setOrganisation(data)
+      } else {
+        setOrganisation(null)
       }
     } catch (error) {
       console.error('Auth check failed:', error)
+      setOrganisation(null)
     } finally {
       setLoading(false)
     }
@@ -107,10 +110,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = async () => {
-    await fetch(`${API_URL}/api/organisations/logout`, {
-      method: 'POST',
-      credentials: 'include',
-    })
+    try {
+      await fetch(`${API_URL}/api/organisations/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+    } catch (error) {
+      console.error('Logout request failed:', error)
+    }
+
     setOrganisation(null)
     navigate('/')
   }
