@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -28,8 +29,7 @@ import AdminAuditLogPage from '@/app/admin/audit-log/page'
 import AdminSettingsPage from '@/app/admin/settings/page'
 import AdminLayout from '@/app/admin/layout'
 
-// Protected route wrapper
-function ProtectedRoute({ children, requireAdmin = false }: { children: React.ReactNode; requireAdmin?: boolean }) {
+function UserProtectedRoute({ children }: { children: React.ReactNode }) {
   const { organisation, loading } = useAuth()
 
   if (loading) {
@@ -38,6 +38,27 @@ function ProtectedRoute({ children, requireAdmin = false }: { children: React.Re
 
   if (!organisation) {
     return <Navigate to="/login" replace />
+  }
+
+  return <>{children}</>
+}
+
+function AdminProtectedRoute({ children }: { children: React.ReactNode }) {
+  const [isChecking, setIsChecking] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+
+  useEffect(() => {
+    const authenticated = typeof window !== 'undefined' && localStorage.getItem('adminAuth') === 'true'
+    setIsAuthenticated(authenticated)
+    setIsChecking(false)
+  }, [])
+
+  if (isChecking) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/admin/login" replace />
   }
 
   return <>{children}</>
@@ -57,61 +78,61 @@ export function AppRoutes() {
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute>
+          <UserProtectedRoute>
             <DashboardLayout>
               <DashboardPage />
             </DashboardLayout>
-          </ProtectedRoute>
+          </UserProtectedRoute>
         }
       />
       <Route
         path="/dashboard/profile"
         element={
-          <ProtectedRoute>
+          <UserProtectedRoute>
             <DashboardLayout>
               <DashboardProfilePage />
             </DashboardLayout>
-          </ProtectedRoute>
+          </UserProtectedRoute>
         }
       />
       <Route
         path="/dashboard/events"
         element={
-          <ProtectedRoute>
+          <UserProtectedRoute>
             <DashboardLayout>
               <DashboardEventsPage />
             </DashboardLayout>
-          </ProtectedRoute>
+          </UserProtectedRoute>
         }
       />
       <Route
         path="/dashboard/events/:id"
         element={
-          <ProtectedRoute>
+          <UserProtectedRoute>
             <DashboardLayout>
               <EventDetailPage />
             </DashboardLayout>
-          </ProtectedRoute>
+          </UserProtectedRoute>
         }
       />
       <Route
         path="/dashboard/team-members/contestant"
         element={
-          <ProtectedRoute>
+          <UserProtectedRoute>
             <DashboardLayout>
               <DashboardTeamContestantPage />
             </DashboardLayout>
-          </ProtectedRoute>
+          </UserProtectedRoute>
         }
       />
       <Route
         path="/dashboard/team-members/coach"
         element={
-          <ProtectedRoute>
+          <UserProtectedRoute>
             <DashboardLayout>
               <DashboardTeamCoachPage />
             </DashboardLayout>
-          </ProtectedRoute>
+          </UserProtectedRoute>
         }
       />
 
@@ -119,71 +140,71 @@ export function AppRoutes() {
       <Route
         path="/admin"
         element={
-          <ProtectedRoute requireAdmin>
+          <AdminProtectedRoute>
             <AdminLayout>
               <AdminDashboardPage />
             </AdminLayout>
-          </ProtectedRoute>
+          </AdminProtectedRoute>
         }
       />
       <Route
         path="/admin/dashboard"
         element={
-          <ProtectedRoute requireAdmin>
+          <AdminProtectedRoute>
             <AdminLayout>
               <AdminDashboardPage />
             </AdminLayout>
-          </ProtectedRoute>
+          </AdminProtectedRoute>
         }
       />
       <Route
         path="/admin/events"
         element={
-          <ProtectedRoute requireAdmin>
+          <AdminProtectedRoute>
             <AdminLayout>
               <AdminEventsPage />
             </AdminLayout>
-          </ProtectedRoute>
+          </AdminProtectedRoute>
         }
       />
       <Route
         path="/admin/registrations"
         element={
-          <ProtectedRoute requireAdmin>
+          <AdminProtectedRoute>
             <AdminLayout>
               <AdminRegistrationsPage />
             </AdminLayout>
-          </ProtectedRoute>
+          </AdminProtectedRoute>
         }
       />
       <Route
         path="/admin/analytics"
         element={
-          <ProtectedRoute requireAdmin>
+          <AdminProtectedRoute>
             <AdminLayout>
               <AdminAnalyticsPage />
             </AdminLayout>
-          </ProtectedRoute>
+          </AdminProtectedRoute>
         }
       />
       <Route
         path="/admin/audit-log"
         element={
-          <ProtectedRoute requireAdmin>
+          <AdminProtectedRoute>
             <AdminLayout>
               <AdminAuditLogPage />
             </AdminLayout>
-          </ProtectedRoute>
+          </AdminProtectedRoute>
         }
       />
       <Route
         path="/admin/settings"
         element={
-          <ProtectedRoute requireAdmin>
+          <AdminProtectedRoute>
             <AdminLayout>
               <AdminSettingsPage />
             </AdminLayout>
-          </ProtectedRoute>
+          </AdminProtectedRoute>
         }
       />
 
