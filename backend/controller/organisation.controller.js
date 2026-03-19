@@ -343,7 +343,15 @@ export const getAllOrganisationsAdmin = async (req, res) => {
             .select("-password -resetPasswordOTP -resetPasswordOTPExpire")
             .sort({ createdAt: -1 });
 
-        res.status(200).json(organisations);
+        const orgIdsWithPayments = await Payment.distinct("organisationId");
+        const paymentOrgIdSet = new Set(orgIdsWithPayments.map((id) => id.toString()));
+
+        const enriched = organisations.map((org) => ({
+            ...org.toObject(),
+            hasPayments: paymentOrgIdSet.has(org._id.toString()),
+        }));
+
+        res.status(200).json(enriched);
     } catch (error) {
         console.log("Error in getAllOrganisationsAdmin controller", error.message);
         res.status(500).json({ error: "Internal server error" });

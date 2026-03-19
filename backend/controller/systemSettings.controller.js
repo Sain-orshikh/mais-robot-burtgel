@@ -97,6 +97,22 @@ export const updateAdminSettings = async (req, res) => {
                 return res.status(400).json({ error: "Category codes must be unique" });
             }
 
+            const hasInvalidNumbers = normalized.some(
+                (cat) =>
+                    !Number.isFinite(cat.maxTeamsPerOrg) ||
+                    !Number.isFinite(cat.minContestantsPerTeam) ||
+                    !Number.isFinite(cat.maxContestantsPerTeam) ||
+                    cat.maxTeamsPerOrg < 1 ||
+                    cat.minContestantsPerTeam < 1 ||
+                    cat.maxContestantsPerTeam < cat.minContestantsPerTeam
+            );
+
+            if (hasInvalidNumbers) {
+                return res.status(400).json({
+                    error: "Category numeric fields are invalid. Check max teams/min-max contestants.",
+                });
+            }
+
             updates.availableCategories = normalized;
         }
 
@@ -109,6 +125,15 @@ export const updateAdminSettings = async (req, res) => {
         res.status(200).json(settings);
     } catch (error) {
         console.log("Error in updateAdminSettings controller", error.message);
+
+        if (error.name === "ValidationError") {
+            return res.status(400).json({ error: error.message });
+        }
+
+        if (error.code === 11000) {
+            return res.status(400).json({ error: "Settings record conflict. Please retry." });
+        }
+
         res.status(500).json({ error: "Internal server error" });
     }
 };

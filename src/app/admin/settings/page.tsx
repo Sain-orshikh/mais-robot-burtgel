@@ -16,6 +16,7 @@ type AdminOrganisation = {
   typeDetail: string
   aimag: string
   email: string
+  hasPayments?: boolean
 }
 
 const createCategory = (): EditableCategory => ({
@@ -39,14 +40,15 @@ export default function AdminSettingsPage() {
   const [loginLogoUrl, setLoginLogoUrl] = useState('/icons/12.jpg')
   const [categories, setCategories] = useState<EditableCategory[]>([])
   const [organisations, setOrganisations] = useState<AdminOrganisation[]>([])
+  const [showAllOrganisations, setShowAllOrganisations] = useState(false)
 
   useEffect(() => {
     void fetchSettings()
     void fetchOrganisations()
   }, [])
 
-  const canSave = useMemo(() => {
-    if (categories.length === 0) return false
+  const isCategoriesValid = useMemo(() => {
+    if (categories.length === 0) return true
     return categories.every((cat: EditableCategory) => {
       const hasRequired = cat.categoryCode.trim() && cat.name.trim()
       const hasValidNumbers =
@@ -56,6 +58,13 @@ export default function AdminSettingsPage() {
       return Boolean(hasRequired && hasValidNumbers)
     })
   }, [categories])
+
+  const visibleOrganisations = useMemo(() => {
+    if (showAllOrganisations) return organisations
+    return organisations.filter((org) => !org.hasPayments)
+  }, [organisations, showAllOrganisations])
+
+  const paidOrganisationCount = useMemo(() => organisations.filter((org) => org.hasPayments).length, [organisations])
 
   const fetchSettings = async () => {
     try {
@@ -114,32 +123,32 @@ export default function AdminSettingsPage() {
   }
 
   const saveSettings = async () => {
-    if (!canSave) {
-      toast({
-        title: 'Validation error',
-        description: 'Please complete all required category fields with valid values.',
-        variant: 'destructive',
-      })
-      return
-    }
-
     setSaving(true)
     try {
-      await settingsApi.updateAdmin({
+      const payload: any = {
         bankName,
         bankAccountName,
         bankAccountNumber,
         loginLogoUrl,
-        availableCategories: categories.map(({ _tmpId, ...cat }: EditableCategory) => ({
+      }
+
+      if (isCategoriesValid && categories.length > 0) {
+        payload.availableCategories = categories.map(({ _tmpId, ...cat }: EditableCategory) => ({
           ...cat,
           categoryCode: cat.categoryCode.toUpperCase().trim(),
           name: cat.name.trim(),
-        })),
+        }))
+      }
+
+      await settingsApi.updateAdmin({
+        ...payload,
       })
 
       toast({
         title: 'Saved',
-        description: 'Admin settings updated successfully.',
+        description: isCategoriesValid
+          ? 'Admin settings updated successfully.'
+          : 'Logo/bank settings saved. Categories were skipped due to validation issues.',
       })
 
       await fetchSettings()
@@ -232,7 +241,7 @@ export default function AdminSettingsPage() {
           </h1>
           <p className='text-sm text-muted-foreground'>Manage categories, bank account info, login logo, and organisations</p>
         </div>
-        <Button onClick={saveSettings} disabled={saving || !canSave} className='gap-2'>
+        <Button onClick={saveSettings} disabled={saving} className='gap-2'>
           <Save size={16} />
           {saving ? 'Saving...' : 'Save Settings'}
         </Button>
@@ -355,15 +364,28 @@ export default function AdminSettingsPage() {
           <p className='text-sm text-muted-foreground'>
             You can remove unused organisations. If the organisation has at least one payment, deletion is blocked.
           </p>
+          <div className='flex items-center justify-between'>
+            <p className='text-xs text-muted-foreground'>
+              Hidden paid organisations: {paidOrganisationCount}
+            </p>
+            <Button
+              type='button'
+              variant='outline'
+              size='sm'
+              onClick={() => setShowAllOrganisations((prev) => !prev)}
+            >
+              {showAllOrganisations ? 'Hide Paid Orgs' : 'Show All Orgs'}
+            </Button>
+          </div>
           <div className='space-y-2 max-h-96 overflow-y-auto'>
             {orgLoading && <p className='text-sm text-muted-foreground'>Loading organisations...</p>}
-            {!orgLoading && organisations.length === 0 && <p className='text-sm text-muted-foreground'>No organisations found.</p>}
-            {organisations.map((org: AdminOrganisation) => (
+            {!orgLoading && visibleOrganisations.length === 0 && <p className='text-sm text-muted-foreground'>No organisations found.</p>}
+            {visibleOrganisations.map((org: AdminOrganisation) => (
               <div key={org._id} className='flex items-center justify-between p-3 border rounded-lg'>
                 <div>
                   <p className='font-medium'>{org.typeDetail}</p>
                   <p className='text-xs text-muted-foreground'>
-                    {org.organisationId} • {org.aimag} • {org.email}
+                    {org.organisationId} • {org.aimag} • {org.email} {org.hasPayments ? '• Paid' : ''}
                   </p>
                 </div>
                 <Button variant='destructive' size='sm' onClick={() => deleteOrganisation(org)}>
