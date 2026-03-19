@@ -3,6 +3,7 @@ import Contestant from "../models/contestant.model.js";
 import Coach from "../models/coach.model.js";
 import Organisation from "../models/organisation.model.js";
 import Payment from "../models/payment.model.js";
+import Event from "../models/event.model.js";
 
 // Export all teams with payment approved status
 export const exportTeams = async (req, res) => {
@@ -156,5 +157,100 @@ export const exportOrganisations = async (req, res) => {
     } catch (error) {
         console.error("Error exporting organisations:", error.message);
         res.status(500).json({ error: "Failed to export organisations" });
+    }
+};
+
+// Real analytics for admin dashboard
+export const exportAnalytics = async (req, res) => {
+    try {
+        const [
+            totalTeams,
+            totalContestants,
+            totalCoaches,
+            totalOrganisations,
+            approvedPayments,
+            events,
+        ] = await Promise.all([
+            Team.countDocuments({ status: "active" }),
+            Contestant.countDocuments(),
+            Coach.countDocuments(),
+            Organisation.countDocuments(),
+            Payment.find({ status: "approved" }).select("teamIds"),
+            Event.find()
+                .populate("registrations.organisationId", "typeDetail organisationId")
+                .select("name registrations"),
+        ]);
+
+        const paymentApprovedTeams = approvedPayments.reduce((sum, payment) => {
+            const teamCount = Array.isArray(payment.teamIds) ? payment.teamIds.length : 0;
+            return sum + teamCount;
+        }, 0);
+
+        const paymentProcessedMNT = paymentApprovedTeams * 20000;
+
+        const allRegistrations = events.flatMap((event) =>
+            (event.registrations || []).map((reg) => ({
+                eventName: event.name,
+                registeredAt: reg.registeredAt,
+                status: reg.status || "pending",
+                category: reg.category,
+                categories: Array.isArray(reg.categories) ? reg.categories : [],
+                organisationName: reg.organisationId?.typeDetail || "Unknown",
+            }))
+        );
+
+        const stats = {
+            total: allRegistrations.length,
+            approved: allRegistrations.filter((reg) => reg.status === "approved").length,
+            pending: allRegistrations.filter((reg) => reg.status === "pending").length,
+            rejected: allRegistrations.filter((reg) => reg.status === "rejected").length,
+        };
+
+        const categoryStats = {};
+        for (const reg of allRegistrations) {
+            if (reg.categories.length > 0) {
+                for (const category of reg.categories) {
+                    categoryStats[category] = (categoryStats[category] || 0) + 1;
+                }
+            } else {
+                const key = reg.category || "Uncategorized";
+                categoryStats[key] = (categoryStats[key] || 0) + 1;
+            }
+        }
+
+        const schoolCounts = {};
+        for (const reg of allRegistrations) {
+            const school = reg.organisationName || "Unknown";
+            schoolCounts[school] = (schoolCounts[school] || 0) + 1;
+        }
+
+        const schoolStats = Object.entries(schoolCounts)
+            .map(([school, count]) => ({ school, count }))
+            .sort((a, b) => b.count - a.count);
+
+        const registrationsByDate = {};
+        for (const reg of allRegistrations) {
+            if (!reg.registeredAt) continue;
+            const dateKey = new Date(reg.registeredAt).toISOString().split("T")[0];
+            registrationsByDate[dateKey] = (registrationsByDate[dateKey] || 0) + 1;
+        }
+
+        res.status(200).json({
+            stats,
+            totals: {
+                teams: totalTeams,
+                coaches: totalCoaches,
+                organisations: totalOrganisations,
+                contestants: totalContestants,
+                paymentApprovedTeams,
+                paymentProcessedMNT,
+            },
+            categoryStats,
+            schoolStats,
+            registrationsByDate,
+        });
+    } catch (error) {
+        console.error("Error exporting analytics:", error.message);
+        res.status(500).json({ error: "Failed to export analytics" });
     }
 };
