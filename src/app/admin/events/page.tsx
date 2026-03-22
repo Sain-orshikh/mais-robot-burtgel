@@ -1,6 +1,5 @@
-'use client'
-
 import { useState, useEffect } from 'react'
+import type { ChangeEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -23,25 +22,11 @@ import {
 } from '@/components/ui/table'
 import { Plus, Edit, Trash2, Calendar } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { AdminHeader } from '@/app/components/admin/AdminHeader'
+import { settingsApi, AdminCategory } from '@/lib/api/settings'
+import { useNavigate } from 'react-router-dom'
+import { uploadToCloudinary } from '@/lib/cloudinary'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
-
-// 12 competition categories
-const AVAILABLE_CATEGORIES = [
-  { code: 'MNR', name: 'Mini Sumo RC', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'MGR', name: 'Mega Sumo RC', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'MNA', name: 'Mini Sumo Auto', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'MGA', name: 'Mega Sumo Auto', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'RRC', name: 'Robot Rugby', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'DRC', name: 'Drone RC', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'DRA', name: 'Drone Auto', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'LFG', name: 'Line Follower (Lego)', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'LFH', name: 'Line Follower (High Speed)', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'LFL', name: 'Line Follower (Low Speed)', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'LSR', name: 'Lego Sumo', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-  { code: 'LUR', name: 'Lego Unknown', maxTeamsPerOrg: 2, minContestants: 2, maxContestants: 2 },
-]
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
 interface Event {
   _id: string
@@ -49,9 +34,11 @@ interface Event {
   description: string
   startDate: string
   endDate: string
-  registrationDeadline: string
+  registrationStart: string
+  registrationEnd: string
   location: string
-  status: 'open' | 'closed' | 'completed'
+  imageUrl?: string
+  status?: 'upcoming' | 'registration-open' | 'registration-closed' | 'ongoing' | 'completed'
   categories: {
     categoryCode: string
     name: string
@@ -63,20 +50,102 @@ interface Event {
 
 export default function AdminEventsPage() {
   const { toast } = useToast()
+  const navigate = useNavigate()
   const [events, setEvents] = useState<Event[]>([])
+  const [availableCategories, setAvailableCategories] = useState<AdminCategory[]>([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
   const [saving, setSaving] = useState(false)
+  const [imageUploading, setImageUploading] = useState(false)
+
+  // Helper to convert stored date to local date/time parts (no manual timezone offset)
+  const toLocalDateTime = (dateStr: string) => {
+    const date = new Date(dateStr)
+    const hours = date.getHours()
+    const minutes = date.getMinutes()
+    const isPM = hours >= 12
+    const displayHours = hours % 12 || 12
+
+    return {
+      date: date.toISOString().split('T')[0],
+      time: `${String(displayHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`,
+      ampm: isPM ? 'PM' : 'AM'
+    }
+  }
+
+  // Helper to convert local date/time to ISO string (no manual GMT+8 adjustment)
+  const toLocalISO = (date: string, time: string, ampm: string) => {
+    if (!date || !time) {
+      throw new Error('Date and time are required')
+    }
+    
+    // Parse the time from HH:mm format (24-hour from input[type=time])
+    const [inputHours, minutes] = time.split(':').map(Number)
+    if (isNaN(inputHours) || isNaN(minutes)) {
+      throw new Error('Invalid time format')
+    }
+    
+    // The input gives us 24-hour time, but we also have AM/PM selector
+    // We need to convert the input hours to 12-hour format first, then apply AM/PM
+    let hour24 = inputHours
+    
+    // If time input shows 12-hour format (0-12), convert with AM/PM
+    // Otherwise if it's already 24-hour (0-23), use it directly
+    if (inputHours <= 12) {
+      // Treat as 12-hour format and apply AM/PM
+      hour24 = inputHours
+      if (ampm === 'PM' && inputHours !== 12) hour24 += 12
+      if (ampm === 'AM' && inputHours === 12) hour24 = 0
+    }
+    
+    const [year, month, day] = date.split('-').map(Number)
+    const localDate = new Date(year, (month || 1) - 1, day || 1, hour24, minutes, 0)
+    if (isNaN(localDate.getTime())) {
+      throw new Error('Invalid date or time value')
+    }
+
+    return localDate.toISOString()
+  }
+
+  // Helper to compute event status based on dates
+  const getEventStatus = (event: Event): { status: string; color: string; label: string } => {
+    const now = new Date()
+    const regStart = new Date(event.registrationStart)
+    const regEnd = new Date(event.registrationEnd)
+    const eventStart = new Date(event.startDate)
+    const eventEnd = new Date(event.endDate)
+
+    if (now < regStart) {
+      return { status: 'upcoming', color: 'bg-gray-100 text-gray-800', label: 'Upcoming' }
+    } else if (now >= regStart && now < regEnd) {
+      return { status: 'registration-open', color: 'bg-green-100 text-green-800', label: 'Registration Open' }
+    } else if (now >= regEnd && now < eventStart) {
+      return { status: 'registration-closed', color: 'bg-yellow-100 text-yellow-800', label: 'Registration Closed' }
+    } else if (now >= eventStart && now < eventEnd) {
+      return { status: 'ongoing', color: 'bg-blue-100 text-blue-800', label: 'Ongoing' }
+    } else {
+      return { status: 'completed', color: 'bg-gray-100 text-gray-800', label: 'Completed' }
+    }
+  }
 
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     startDate: '',
+    startTime: '09:00',
+    startAMPM: 'AM',
     endDate: '',
-    registrationDeadline: '',
+    endTime: '05:00',
+    endAMPM: 'PM',
+    registrationStartDate: '',
+    registrationStartTime: '09:00',
+    registrationStartAMPM: 'AM',
+    registrationEndDate: '',
+    registrationEndTime: '11:59',
+    registrationEndAMPM: 'PM',
     location: '',
-    status: 'open' as 'open' | 'closed' | 'completed',
+    imageUrl: '',
     selectedCategories: [] as string[],
   })
 
@@ -86,10 +155,16 @@ export default function AdminEventsPage() {
 
   const fetchEvents = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/events`)
-      if (!response.ok) throw new Error('Failed to fetch events')
-      const data = await response.json()
+      const [eventResponse, settingsResponse] = await Promise.all([
+        fetch(`${API_URL}/api/events`),
+        settingsApi.getAdmin(),
+      ])
+
+      if (!eventResponse.ok) throw new Error('Failed to fetch events')
+
+      const data = await eventResponse.json()
       setEvents(data)
+      setAvailableCategories(settingsResponse.availableCategories || [])
     } catch (error) {
       toast({
         title: 'Error',
@@ -107,10 +182,19 @@ export default function AdminEventsPage() {
       name: '',
       description: '',
       startDate: '',
+      startTime: '09:00',
+      startAMPM: 'AM',
       endDate: '',
-      registrationDeadline: '',
+      endTime: '05:00',
+      endAMPM: 'PM',
+      registrationStartDate: '',
+      registrationStartTime: '09:00',
+      registrationStartAMPM: 'AM',
+      registrationEndDate: '',
+      registrationEndTime: '11:59',
+      registrationEndAMPM: 'PM',
       location: '',
-      status: 'open',
+      imageUrl: '',
       selectedCategories: [],
     })
     setIsModalOpen(true)
@@ -120,20 +204,36 @@ export default function AdminEventsPage() {
     setEditingEvent(event)
     
     // Extract category codes from event categories
-    const categoryCodes = event.categories.map(c => {
-      // Try to find matching category by name if categoryCode is missing
-      const matchingCat = AVAILABLE_CATEGORIES.find(ac => ac.name === c.name)
-      return matchingCat?.code || ''
-    }).filter(Boolean)
+    const categoryCodes = event.categories
+      .map((c) => {
+        if (c.categoryCode) return c.categoryCode
+        const matchingCat = availableCategories.find((ac) => ac.name === c.name)
+        return matchingCat?.categoryCode || ''
+      })
+      .filter(Boolean)
+    
+    const startDateTime = toLocalDateTime(event.startDate)
+    const endDateTime = toLocalDateTime(event.endDate)
+    const regStartDateTime = toLocalDateTime(event.registrationStart)
+    const regEndDateTime = toLocalDateTime(event.registrationEnd)
     
     setFormData({
       name: event.name,
       description: event.description,
-      startDate: new Date(event.startDate).toISOString().split('T')[0],
-      endDate: new Date(event.endDate).toISOString().split('T')[0],
-      registrationDeadline: new Date(event.registrationDeadline).toISOString().split('T')[0],
+      startDate: startDateTime.date,
+      startTime: startDateTime.time,
+      startAMPM: startDateTime.ampm,
+      endDate: endDateTime.date,
+      endTime: endDateTime.time,
+      endAMPM: endDateTime.ampm,
+      registrationStartDate: regStartDateTime.date,
+      registrationStartTime: regStartDateTime.time,
+      registrationStartAMPM: regStartDateTime.ampm,
+      registrationEndDate: regEndDateTime.date,
+      registrationEndTime: regEndDateTime.time,
+      registrationEndAMPM: regEndDateTime.ampm,
       location: event.location,
-      status: event.status,
+      imageUrl: event.imageUrl || '',
       selectedCategories: categoryCodes,
     })
     setIsModalOpen(true)
@@ -148,12 +248,63 @@ export default function AdminEventsPage() {
     }))
   }
 
+  const handleEventImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: 'File too large',
+        description: 'Please select an image under 5MB',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setImageUploading(true)
+    try {
+      const imageUrl = await uploadToCloudinary(file)
+      setFormData((prev) => ({ ...prev, imageUrl }))
+      toast({
+        title: 'Image uploaded',
+        description: 'Event image uploaded to cloud successfully.',
+      })
+    } catch (error) {
+      toast({
+        title: 'Upload failed',
+        description: error instanceof Error ? error.message : 'Failed to upload image',
+        variant: 'destructive',
+      })
+    } finally {
+      setImageUploading(false)
+      e.target.value = ''
+    }
+  }
+
   const handleSaveEvent = async () => {
     if (!formData.name || !formData.description || !formData.startDate || 
-        !formData.endDate || !formData.registrationDeadline || !formData.location) {
+        !formData.endDate || !formData.registrationStartDate || !formData.registrationEndDate || !formData.location) {
       toast({
         title: 'Validation Error',
         description: 'Please fill in all required fields',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (availableCategories.length === 0) {
+      toast({
+        title: 'No categories configured',
+        description: 'Please configure categories first in admin settings.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (!formData.startTime || !formData.endTime || !formData.registrationStartTime || !formData.registrationEndTime) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please set the time for all dates',
         variant: 'destructive',
       })
       return
@@ -171,24 +322,25 @@ export default function AdminEventsPage() {
     setSaving(true)
     try {
       const categories = formData.selectedCategories.map(code => {
-        const cat = AVAILABLE_CATEGORIES.find(c => c.code === code)!
+        const cat = availableCategories.find(c => c.categoryCode === code)!
         return {
-          categoryCode: cat.code,
+          categoryCode: cat.categoryCode,
           name: cat.name,
           maxTeamsPerOrg: cat.maxTeamsPerOrg,
-          minContestantsPerTeam: cat.minContestants,
-          maxContestantsPerTeam: cat.maxContestants,
+          minContestantsPerTeam: cat.minContestantsPerTeam,
+          maxContestantsPerTeam: cat.maxContestantsPerTeam,
         }
       })
 
       const submitData = {
         name: formData.name,
         description: formData.description,
-        startDate: new Date(formData.startDate).toISOString(),
-        endDate: new Date(formData.endDate).toISOString(),
-        registrationDeadline: new Date(formData.registrationDeadline).toISOString(),
+        startDate: toLocalISO(formData.startDate, formData.startTime, formData.startAMPM),
+        endDate: toLocalISO(formData.endDate, formData.endTime, formData.endAMPM),
+        registrationStart: toLocalISO(formData.registrationStartDate, formData.registrationStartTime, formData.registrationStartAMPM),
+        registrationEnd: toLocalISO(formData.registrationEndDate, formData.registrationEndTime, formData.registrationEndAMPM),
         location: formData.location,
-        status: formData.status,
+        imageUrl: formData.imageUrl || '/icons/12.jpg',
         categories,
       }
 
@@ -267,18 +419,21 @@ export default function AdminEventsPage() {
 
   return (
     <div className='min-h-screen bg-gray-50'>
-      <AdminHeader />
-      
       <div className='container mx-auto px-6 py-8'>
         <div className='flex justify-between items-center mb-6'>
           <div>
             <h1 className='text-2xl font-bold text-gray-800'>Event Management</h1>
             <p className='text-sm text-gray-600 mt-1'>Create and manage competition events</p>
           </div>
-          <Button className='bg-blue-500 hover:bg-blue-600' onClick={openAddModal}>
-            <Plus size={18} className='mr-2' />
-            Add Event
-          </Button>
+          <div className='flex items-center gap-2'>
+            <Button variant='outline' onClick={() => navigate('/admin/settings')}>
+              Manage Categories
+            </Button>
+            <Button className='bg-blue-500 hover:bg-blue-600' onClick={openAddModal}>
+              <Plus size={18} className='mr-2' />
+              Add Event
+            </Button>
+          </div>
         </div>
 
         <div className='bg-white rounded-lg shadow'>
@@ -288,7 +443,7 @@ export default function AdminEventsPage() {
                 <TableHead>Event Name</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Registration Deadline</TableHead>
+                <TableHead>Registration Period</TableHead>
                 <TableHead>Event Date</TableHead>
                 <TableHead>Categories</TableHead>
                 <TableHead className='text-right'>Actions</TableHead>
@@ -302,27 +457,28 @@ export default function AdminEventsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                events.map((event) => (
+                events.map((event) => {
+                  const eventStatus = getEventStatus(event)
+                  return (
                   <TableRow key={event._id}>
                     <TableCell className='font-medium'>{event.name}</TableCell>
                     <TableCell>{event.location}</TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        event.status === 'open' 
-                          ? 'bg-green-100 text-green-700' 
-                          : event.status === 'closed'
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-gray-100 text-gray-700'
-                      }`}>
-                        {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${eventStatus.color}`}>
+                        {eventStatus.label}
                       </span>
                     </TableCell>
                     <TableCell>
-                      {new Date(event.registrationDeadline).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}
+                      <div className='text-sm'>
+                        <div>{new Date(event.registrationStart).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        })} - {new Date(event.registrationEnd).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}</div>
+                      </div>
                     </TableCell>
                     <TableCell>
                       {new Date(event.startDate).toLocaleDateString('en-US', {
@@ -358,7 +514,8 @@ export default function AdminEventsPage() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
+                  )
+                })
               )}
             </TableBody>
           </Table>
@@ -412,109 +569,236 @@ export default function AdminEventsPage() {
                 />
               </div>
 
-              <div className='grid grid-cols-3 gap-4'>
-                <div className='grid gap-2'>
-                  <Label htmlFor='registrationDeadline'>
-                    Registration Deadline <span className='text-red-500'>*</span>
-                  </Label>
-                  <Input
-                    id='registrationDeadline'
-                    type='date'
-                    value={formData.registrationDeadline}
-                    onChange={(e) => setFormData({ ...formData, registrationDeadline: e.target.value })}
-                  />
+              <div className='grid gap-2'>
+                <Label htmlFor='imageUrl'>Event Image URL</Label>
+                <Input
+                  id='imageUrl'
+                  value={formData.imageUrl}
+                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                  placeholder='https://example.com/event-banner.jpg'
+                />
+                <Input
+                  type='file'
+                  accept='image/*'
+                  onChange={handleEventImageUpload}
+                  disabled={imageUploading}
+                />
+                <p className='text-xs text-gray-500'>
+                  {imageUploading ? 'Uploading image to cloud...' : 'Upload an image file to Cloudinary or paste an image URL manually.'}
+                </p>
+                {formData.imageUrl && (
+                  <div className='w-full h-36 border rounded-md overflow-hidden bg-muted'>
+                    <img src={formData.imageUrl} alt='Event preview' className='w-full h-full object-cover' />
+                  </div>
+                )}
+              </div>
+
+              {/* Registration Period */}
+              <div className='grid gap-4 p-4 border rounded-lg bg-gray-50'>
+                <h3 className='font-semibold text-sm'>Registration Period (Ulaanbaatar Time GMT+8)</h3>
+                
+                <div className='grid grid-cols-2 gap-4'>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='registrationStartDate'>
+                      Start Date <span className='text-red-500'>*</span>
+                    </Label>
+                    <Input
+                      id='registrationStartDate'
+                      type='date'
+                      value={formData.registrationStartDate}
+                      onChange={(e) => setFormData({ ...formData, registrationStartDate: e.target.value })}
+                    />
+                  </div>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='registrationStartTime'>Time</Label>
+                    <div className='flex gap-2'>
+                      <Input
+                        id='registrationStartTime'
+                        type='time'
+                        value={formData.registrationStartTime}
+                        onChange={(e) => setFormData({ ...formData, registrationStartTime: e.target.value })}
+                        className='flex-1'
+                      />
+                      <select
+                        value={formData.registrationStartAMPM}
+                        onChange={(e) => setFormData({ ...formData, registrationStartAMPM: e.target.value })}
+                        className='border rounded-md px-3 py-2 appearance-none bg-white'
+                        style={{ minWidth: '70px' }}
+                      >
+                        <option value='AM'>AM</option>
+                        <option value='PM'>PM</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
-                <div className='grid gap-2'>
-                  <Label htmlFor='startDate'>
-                    Start Date <span className='text-red-500'>*</span>
-                  </Label>
-                  <Input
-                    id='startDate'
-                    type='date'
-                    value={formData.startDate}
-                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                  />
+                <div className='grid grid-cols-2 gap-4'>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='registrationEndDate'>
+                      End Date <span className='text-red-500'>*</span>
+                    </Label>
+                    <Input
+                      id='registrationEndDate'
+                      type='date'
+                      value={formData.registrationEndDate}
+                      onChange={(e) => setFormData({ ...formData, registrationEndDate: e.target.value })}
+                    />
+                  </div>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='registrationEndTime'>Time</Label>
+                    <div className='flex gap-2'>
+                      <Input
+                        id='registrationEndTime'
+                        type='time'
+                        value={formData.registrationEndTime}
+                        onChange={(e) => setFormData({ ...formData, registrationEndTime: e.target.value })}
+                        className='flex-1'
+                      />
+                      <select
+                        value={formData.registrationEndAMPM}
+                        onChange={(e) => setFormData({ ...formData, registrationEndAMPM: e.target.value })}
+                        className='border rounded-md px-3 py-2 appearance-none bg-white'
+                        style={{ minWidth: '70px' }}
+                      >
+                        <option value='AM'>AM</option>
+                        <option value='PM'>PM</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Event Dates */}
+              <div className='grid gap-4 p-4 border rounded-lg bg-gray-50'>
+                <h3 className='font-semibold text-sm'>Event Dates (Local Time)</h3>
+                
+                <div className='grid grid-cols-2 gap-4'>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='startDate'>
+                      Start Date <span className='text-red-500'>*</span>
+                    </Label>
+                    <Input
+                      id='startDate'
+                      type='date'
+                      value={formData.startDate}
+                      onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                    />
+                  </div>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='startTime'>Time</Label>
+                    <div className='flex gap-2'>
+                      <Input
+                        id='startTime'
+                        type='time'
+                        value={formData.startTime}
+                        onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                        className='flex-1'
+                      />
+                      <select
+                        value={formData.startAMPM}
+                        onChange={(e) => setFormData({ ...formData, startAMPM: e.target.value })}
+                        className='border rounded-md px-3 py-2 appearance-none bg-white'
+                        style={{ minWidth: '70px' }}
+                      >
+                        <option value='AM'>AM</option>
+                        <option value='PM'>PM</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
-                <div className='grid gap-2'>
-                  <Label htmlFor='endDate'>
-                    End Date <span className='text-red-500'>*</span>
-                  </Label>
-                  <Input
-                    id='endDate'
-                    type='date'
-                    value={formData.endDate}
-                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                  />
+                <div className='grid grid-cols-2 gap-4'>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='endDate'>
+                      End Date <span className='text-red-500'>*</span>
+                    </Label>
+                    <Input
+                      id='endDate'
+                      type='date'
+                      value={formData.endDate}
+                      onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                    />
+                  </div>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='endTime'>Time</Label>
+                    <div className='flex gap-2'>
+                      <Input
+                        id='endTime'
+                        type='time'
+                        value={formData.endTime}
+                        onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                        className='flex-1'
+                      />
+                      <select
+                        value={formData.endAMPM}
+                        onChange={(e) => setFormData({ ...formData, endAMPM: e.target.value })}
+                        className='border rounded-md px-3 py-2 appearance-none bg-white'
+                        style={{ minWidth: '70px' }}
+                      >
+                        <option value='AM'>AM</option>
+                        <option value='PM'>PM</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               <div className='grid gap-2'>
-                <Label>
-                  Event Status <span className='text-red-500'>*</span>
-                </Label>
-                <div className='flex gap-4'>
-                  <label className='flex items-center gap-2 cursor-pointer'>
-                    <input
-                      type='radio'
-                      name='status'
-                      value='open'
-                      checked={formData.status === 'open'}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                    />
-                    <span>Open</span>
-                  </label>
-                  <label className='flex items-center gap-2 cursor-pointer'>
-                    <input
-                      type='radio'
-                      name='status'
-                      value='closed'
-                      checked={formData.status === 'closed'}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                    />
-                    <span>Closed</span>
-                  </label>
-                  <label className='flex items-center gap-2 cursor-pointer'>
-                    <input
-                      type='radio'
-                      name='status'
-                      value='completed'
-                      checked={formData.status === 'completed'}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                    />
-                    <span>Completed</span>
-                  </label>
+                <div className='flex items-center justify-between'>
+                  <Label>
+                    Competition Categories <span className='text-red-500'>*</span>
+                  </Label>
+                  <div className='flex gap-2'>
+                    <Button
+                      type='button'
+                      variant='outline'
+                      size='sm'
+                      onClick={() => setFormData({ 
+                        ...formData, 
+                        selectedCategories: availableCategories.map(c => c.categoryCode) 
+                      })}
+                    >
+                      Select All
+                    </Button>
+                    <Button
+                      type='button'
+                      variant='outline'
+                      size='sm'
+                      onClick={() => setFormData({ 
+                        ...formData, 
+                        selectedCategories: [] 
+                      })}
+                    >
+                      Clear All
+                    </Button>
+                  </div>
                 </div>
-              </div>
-
-              <div className='grid gap-2'>
-                <Label>
-                  Competition Categories <span className='text-red-500'>*</span>
-                </Label>
                 <p className='text-sm text-gray-600 mb-2'>Select categories available for this event</p>
                 <div className='grid grid-cols-2 gap-3 border rounded-lg p-4 max-h-60 overflow-y-auto'>
-                  {AVAILABLE_CATEGORIES.map((category) => (
-                    <div key={category.code} className='flex items-start space-x-2'>
+                  {availableCategories.map((category) => (
+                    <div key={category.categoryCode} className='flex items-start space-x-2'>
                       <Checkbox
-                        id={`cat-${category.code}`}
-                        checked={formData.selectedCategories.includes(category.code)}
-                        onCheckedChange={() => handleCategoryToggle(category.code)}
+                        id={`cat-${category.categoryCode}`}
+                        checked={formData.selectedCategories.includes(category.categoryCode)}
+                        onCheckedChange={() => handleCategoryToggle(category.categoryCode)}
                       />
                       <Label
-                        htmlFor={`cat-${category.code}`}
+                        htmlFor={`cat-${category.categoryCode}`}
                         className='cursor-pointer font-normal text-sm'
                       >
                         <div className='font-medium'>{category.name}</div>
                         <div className='text-xs text-gray-500'>
-                          {category.code} • {category.minContestants}-{category.maxContestants} contestants
+                          {category.categoryCode} • {category.minContestantsPerTeam}-{category.maxContestantsPerTeam} contestants
                         </div>
                       </Label>
                     </div>
                   ))}
                 </div>
+                {availableCategories.length === 0 && (
+                  <p className='text-sm text-amber-600'>No categories configured. Please add categories in Admin Settings.</p>
+                )}
                 <p className='text-sm text-gray-500'>
-                  Selected: {formData.selectedCategories.length} / {AVAILABLE_CATEGORIES.length}
+                  Selected: {formData.selectedCategories.length} / {availableCategories.length}
                 </p>
               </div>
             </div>

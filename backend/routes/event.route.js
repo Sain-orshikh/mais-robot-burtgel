@@ -8,6 +8,8 @@ import {
     getMyRegistrations,
     updateEvent,
     deleteEvent,
+    approveRegistration,
+    rejectRegistration,
 } from "../controller/event.controller.js";
 
 const router = express.Router();
@@ -24,5 +26,7 @@ router.get("/:eventId/my-registrations", protectOrganisationRoute, getMyRegistra
 router.post("/", createEvent);
 router.put("/:id", updateEvent);
 router.delete("/:id", deleteEvent);
+router.put("/:eventId/registrations/:registrationId/approve", approveRegistration);
+router.put("/:eventId/registrations/:registrationId/reject", rejectRegistration);
 
 export default router;

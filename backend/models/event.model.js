@@ -18,7 +18,11 @@ const eventSchema = new mongoose.Schema(
             type: Date,
             required: true,
         },
-        registrationDeadline: {
+        registrationStart: {
+            type: Date,
+            required: true,
+        },
+        registrationEnd: {
             type: Date,
             required: true,
         },
@@ -26,8 +30,16 @@ const eventSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
+        imageUrl: {
+            type: String,
+            default: '/icons/12.jpg',
+        },
         categories: [
             {
+                categoryCode: {
+                    type: String,
+                    required: true,
+                },
                 name: {
                     type: String,
                     required: true,
@@ -67,7 +79,17 @@ const eventSchema = new mongoose.Schema(
                 coachId: {
                     type: mongoose.Schema.Types.ObjectId,
                     ref: 'Coach',
-                    required: true,
+                },
+                teamIds: [{
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'Team',
+                }],
+                categories: [{
+                    type: String,
+                }],
+                paymentId: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'Payment',
                 },
                 registeredAt: {
                     type: Date,
@@ -77,17 +99,33 @@ const eventSchema = new mongoose.Schema(
                     type: String,
                     enum: ['pending', 'approved', 'rejected'],
                     default: 'pending',
-                }
+                },
+                rejectionReason: {
+                    type: String,
+                    default: null,
+                },
             }
         ],
-        status: {
-            type: String,
-            enum: ['upcoming', 'ongoing', 'completed', 'cancelled'],
-            default: 'upcoming',
-        },
     },
-    { timestamps: true }
+    { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
+
+// Virtual field to compute event status based on dates
+eventSchema.virtual('status').get(function() {
+    const now = new Date();
+    
+    if (now < this.registrationStart) {
+        return 'upcoming'; // Before registration opens
+    } else if (now >= this.registrationStart && now < this.registrationEnd) {
+        return 'registration-open'; // Registration is open
+    } else if (now >= this.registrationEnd && now < this.startDate) {
+        return 'registration-closed'; // Registration closed, event not started
+    } else if (now >= this.startDate && now < this.endDate) {
+        return 'ongoing'; // Event is happening
+    } else {
+        return 'completed'; // Event has ended
+    }
+});
 
 const Event = mongoose.model("Event", eventSchema);
 

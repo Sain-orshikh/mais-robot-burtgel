@@ -1,5 +1,6 @@
 import Payment from "../models/payment.model.js";
 import Team from "../models/team.model.js";
+import Event from "../models/event.model.js";
 
 // Submit payment for event registration
 export const submitPayment = async (req, res) => {
@@ -18,10 +19,39 @@ export const submitPayment = async (req, res) => {
             return res.status(400).json({ error: "Invalid teams" });
         }
 
-        // Check if payment already exists for this event
-        const existingPayment = await Payment.findOne({ organisationId, eventId });
-        if (existingPayment) {
-            return res.status(400).json({ error: "Payment already submitted for this event" });
+        // Block resubmission for rejected registrations (must create new teams)
+        const rejectedRegistration = await Event.findOne({
+            _id: eventId,
+            registrations: {
+                $elemMatch: {
+                    status: "rejected",
+                    teamIds: { $in: teamIds },
+                },
+            },
+        }).select("_id");
+
+        if (rejectedRegistration) {
+            return res.status(409).json({
+                error: "This registration was rejected. Please create new teams and submit again. If you already paid, request a refund.",
+            });
+        }
+
+        // Check if any of these teams are already paid for
+        const alreadyPaidTeams = teams.filter(team => team.paymentId);
+        if (alreadyPaidTeams.length > 0) {
+            return res.status(400).json({ error: "Some teams are already included in a payment" });
+        }
+
+        // Guard: ensure all teams are still unpaid at the time of submission
+        const unpaidCount = await Team.countDocuments({
+            _id: { $in: teamIds },
+            organisationId,
+            eventId,
+            paymentId: { $in: [null, undefined] },
+        });
+
+        if (unpaidCount !== teamIds.length) {
+            return res.status(409).json({ error: "Some teams were paid in another request" });
         }
 
         const payment = await Payment.create({
@@ -32,6 +62,59 @@ export const submitPayment = async (req, res) => {
             teamIds,
             status: "pending",
         });
+
+        // Update teams to reference this payment (only if still unpaid)
+        const teamUpdateResult = await Team.updateMany(
+            { _id: { $in: teamIds }, paymentId: { $in: [null, undefined] } },
+            { $set: { paymentId: payment._id } }
+        );
+
+        if (teamUpdateResult.modifiedCount !== teamIds.length) {
+            // Roll back payment if teams were linked by another request
+            await Payment.deleteOne({ _id: payment._id });
+            return res.status(409).json({ error: "Payment already submitted for some teams" });
+        }
+
+        // Create a single grouped registration for this payment
+        const event = await Event.findById(eventId);
+
+        if (event) {
+            const categories = Array.from(
+                new Set(
+                    teams.map((team) => team.categoryCode || team.categoryName).filter(Boolean)
+                )
+            );
+
+            // Get coachId from first team
+            const firstTeamCoachId = teams.length > 0 ? teams[0].coachId : null;
+
+            // Avoid duplicate grouped registrations for the same payment or teams
+            const existingGrouped = await Event.findOne({
+                _id: eventId,
+                $or: [
+                    { registrations: { $elemMatch: { paymentId: payment._id, status: { $ne: "rejected" } } } },
+                    { registrations: { $elemMatch: { teamIds: { $in: teamIds }, status: { $ne: "rejected" } } } },
+                ],
+            }).select("_id");
+
+            if (!existingGrouped) {
+                await Event.updateOne(
+                    { _id: eventId },
+                    {
+                        $push: {
+                            registrations: {
+                                organisationId,
+                                teamIds,
+                                categories,
+                                coachId: firstTeamCoachId,
+                                paymentId: payment._id,
+                                status: "pending",
+                            },
+                        },
+                    }
+                );
+            }
+        }
 
         res.status(201).json({ message: "Payment submitted successfully", payment });
     } catch (error) {
@@ -46,13 +129,9 @@ export const getPaymentStatus = async (req, res) => {
         const { eventId } = req.params;
         const organisationId = req.organisation._id;
 
-        const payment = await Payment.findOne({ organisationId, eventId });
+        const payments = await Payment.find({ organisationId, eventId }).sort({ submittedAt: -1 });
 
-        if (!payment) {
-            return res.status(404).json({ error: "No payment found" });
-        }
-
-        res.status(200).json(payment);
+        res.status(200).json(payments);
     } catch (error) {
         console.log("Error in getPaymentStatus controller", error.message);
         res.status(500).json({ error: "Internal server error" });

@@ -1,20 +1,20 @@
-'use client'
-
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from 'react-router-dom'
 import CardBox from '../shared/CardBox'
 import { ThemeToggle } from '../shared/ThemeToggle'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert } from '@/components/ui/alert'
+import { usePublicSettings } from '@/hooks/usePublicSettings'
 
 export const AdminLogin = () => {
-  const router = useRouter()
+  const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const { settings } = usePublicSettings()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -23,8 +23,8 @@ export const AdminLogin = () => {
 
     // Simple authentication - paper wall as requested
     // In production, credentials should be in environment variables
-    const ADMIN_USERNAME = process.env.NEXT_PUBLIC_ADMIN_USERNAME || 'admin'
-    const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'admin123'
+    const ADMIN_USERNAME = import.meta.env.VITE_ADMIN_USERNAME || 'admin'
+    const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123'
 
     // Simulate a small delay for better UX
     await new Promise((resolve) => setTimeout(resolve, 500))
@@ -36,7 +36,7 @@ export const AdminLogin = () => {
       localStorage.setItem('adminLoginTime', new Date().toISOString())
       
       // Redirect to admin dashboard
-      router.push('/admin/dashboard')
+      navigate('/admin/dashboard')
     } else {
       setError('Нэвтрэх нэр эсвэл нууц үг буруу байна')
       setIsLoading(false)
@@ -52,7 +52,11 @@ export const AdminLogin = () => {
         <div className='md:min-w-[450px] min-w-max'>
           <CardBox>
             <div className='flex justify-center mb-4'>
-              <div className='text-4xl font-bold text-primary'>MAIS</div>
+              <img
+                src={settings.loginLogoUrl || '/icons/12.jpg'}
+                alt='MAIS logo'
+                className='w-28 h-28 object-contain rounded-lg'
+              />
             </div>
             <h2 className='text-2xl font-bold text-center mb-2'>
               Админ Удирдлагын Систем

@@ -46,6 +46,12 @@ const organisationSchema = new mongoose.Schema({
         required: true,
         minLength: 6,
     },
+    resetPasswordOTP: {
+        type: String,
+    },
+    resetPasswordOTPExpire: {
+        type: Date,
+    },
     lastLogin: {
         type: Date,
         default: null,

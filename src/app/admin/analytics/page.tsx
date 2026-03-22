@@ -1,12 +1,9 @@
-'use client'
-
+import { useEffect, useMemo, useState } from 'react'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
-import { ThemeToggle } from '@/app/components/shared/ThemeToggle'
-import { mockRegistrations, getRegistrationStats, getCategoryStats, getSchoolStats, COMPETITION_CATEGORIES } from '@/data/mockRegistrations'
+import { Link } from 'react-router-dom'
 import CardBox from '@/app/components/shared/CardBox'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, TrendingUp, Users, School, Calendar, Award } from 'lucide-react'
-import Link from 'next/link'
 import {
   Table,
   TableBody,
@@ -16,9 +13,63 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { ThemeToggle } from '@/app/components/shared/ThemeToggle'
+import { useToast } from '@/hooks/use-toast'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+
+type AnalyticsResponse = {
+  stats: {
+    total: number
+    approved: number
+    pending: number
+    rejected: number
+  }
+  totals: {
+    teams: number
+    coaches: number
+    organisations: number
+    contestants: number
+    paymentApprovedTeams: number
+    paymentProcessedMNT: number
+  }
+  categoryStats: Record<string, number>
+  schoolStats: { school: string; count: number }[]
+  registrationsByDate: Record<string, number>
+}
 
 export default function AnalyticsPage() {
   const { isAuthenticated, isChecking } = useAdminAuth()
+  const { toast } = useToast()
+  const [loading, setLoading] = useState(true)
+  const [analytics, setAnalytics] = useState<AnalyticsResponse | null>(null)
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      void fetchAnalytics()
+    }
+  }, [isAuthenticated])
+
+  const fetchAnalytics = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`${API_URL}/api/export/analytics`)
+      if (!response.ok) {
+        const err = await response.json()
+        throw new Error(err.error || 'Failed to fetch analytics')
+      }
+      const data = await response.json()
+      setAnalytics(data)
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to load analytics',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Show loading state while checking authentication
   if (isChecking || !isAuthenticated) {
@@ -32,19 +83,25 @@ export default function AnalyticsPage() {
     )
   }
 
-  const stats = getRegistrationStats()
-  const categoryStats = getCategoryStats()
-  const schoolStats = getSchoolStats()
+  if (loading || !analytics) {
+    return (
+      <div className='min-h-screen bg-background flex items-center justify-center'>
+        <div className='text-center'>
+          <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto'></div>
+          <p className='mt-4 text-muted-foreground'>Ачааллаж байна...</p>
+        </div>
+      </div>
+    )
+  }
 
-  // Calculate daily registrations
-  const registrationsByDate = mockRegistrations.reduce((acc, reg) => {
-    const date = new Date(reg.registrationDate).toLocaleDateString('mn-MN')
-    acc[date] = (acc[date] || 0) + 1
-    return acc
-  }, {} as Record<string, number>)
+  const { stats, totals, categoryStats, schoolStats, registrationsByDate } = analytics
 
-  const sortedDates = Object.entries(registrationsByDate)
-    .sort(([a], [b]) => new Date(a).getTime() - new Date(b).getTime())
+  const allCategories = useMemo(
+    () => Object.keys(categoryStats).sort((a, b) => (categoryStats[b] || 0) - (categoryStats[a] || 0)),
+    [categoryStats]
+  )
+
+  const sortedDates = Object.entries(registrationsByDate).sort(([a], [b]) => new Date(a).getTime() - new Date(b).getTime())
 
   // Top categories
   const topCategories = Object.entries(categoryStats)
@@ -64,7 +121,7 @@ export default function AnalyticsPage() {
           <div className='flex items-center justify-between'>
             <div className='flex items-center gap-4'>
               <Button asChild variant='ghost' size='sm'>
-                <Link href='/admin/dashboard'>
+                <Link to='/admin/dashboard'>
                   <ArrowLeft size={20} />
                 </Link>
               </Button>
@@ -85,9 +142,9 @@ export default function AnalyticsPage() {
           <CardBox className='border-l-4 border-l-primary'>
             <div className='flex items-center justify-between'>
               <div>
-                <p className='text-sm font-medium text-muted-foreground'>Нийт бүртгэл</p>
-                <h3 className='text-3xl font-bold text-primary mt-2'>{stats.total}</h3>
-                <p className='text-xs text-muted-foreground mt-1'>100% of submissions</p>
+                <p className='text-sm font-medium text-muted-foreground'>Нийт баг</p>
+                <h3 className='text-3xl font-bold text-primary mt-2'>{totals.teams}</h3>
+                <p className='text-xs text-muted-foreground mt-1'>Active registered teams</p>
               </div>
               <Users size={40} className='text-primary opacity-20' />
             </div>
@@ -96,9 +153,9 @@ export default function AnalyticsPage() {
           <CardBox className='border-l-4 border-l-success'>
             <div className='flex items-center justify-between'>
               <div>
-                <p className='text-sm font-medium text-muted-foreground'>Зөвшөөрөгдсөн</p>
-                <h3 className='text-3xl font-bold text-success mt-2'>{stats.approved}</h3>
-                <p className='text-xs text-success mt-1'>{approvalRate}% approval rate</p>
+                <p className='text-sm font-medium text-muted-foreground'>Нийт дасгалжуулагч</p>
+                <h3 className='text-3xl font-bold text-success mt-2'>{totals.coaches}</h3>
+                <p className='text-xs text-success mt-1'>Coach records</p>
               </div>
               <TrendingUp size={40} className='text-success opacity-20' />
             </div>
@@ -107,9 +164,9 @@ export default function AnalyticsPage() {
           <CardBox className='border-l-4 border-l-warning'>
             <div className='flex items-center justify-between'>
               <div>
-                <p className='text-sm font-medium text-muted-foreground'>Хүлээгдэж буй</p>
-                <h3 className='text-3xl font-bold text-warning mt-2'>{stats.pending}</h3>
-                <p className='text-xs text-warning mt-1'>{pendingRate}% pending review</p>
+                <p className='text-sm font-medium text-muted-foreground'>Нийт байгууллага</p>
+                <h3 className='text-3xl font-bold text-warning mt-2'>{totals.organisations}</h3>
+                <p className='text-xs text-warning mt-1'>Org accounts</p>
               </div>
               <Calendar size={40} className='text-warning opacity-20' />
             </div>
@@ -118,12 +175,28 @@ export default function AnalyticsPage() {
           <CardBox className='border-l-4 border-l-error'>
             <div className='flex items-center justify-between'>
               <div>
-                <p className='text-sm font-medium text-muted-foreground'>Татгалзсан</p>
-                <h3 className='text-3xl font-bold text-error mt-2'>{stats.rejected}</h3>
-                <p className='text-xs text-error mt-1'>{rejectionRate}% rejection rate</p>
+                <p className='text-sm font-medium text-muted-foreground'>Нийт оролцогч</p>
+                <h3 className='text-3xl font-bold text-error mt-2'>{totals.contestants}</h3>
+                <p className='text-xs text-error mt-1'>Contestant records</p>
               </div>
               <School size={40} className='text-error opacity-20' />
             </div>
+          </CardBox>
+        </div>
+
+        <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-8'>
+          <CardBox>
+            <p className='text-sm text-muted-foreground'>Нийт бүртгэл</p>
+            <h3 className='text-2xl font-bold mt-2'>{stats.total}</h3>
+          </CardBox>
+          <CardBox>
+            <p className='text-sm text-muted-foreground'>Төлбөр баталгаажсан баг</p>
+            <h3 className='text-2xl font-bold mt-2 text-success'>{totals.paymentApprovedTeams}</h3>
+            <p className='text-xs text-muted-foreground mt-1'>1 баг = 20,000 MNT</p>
+          </CardBox>
+          <CardBox>
+            <p className='text-sm text-muted-foreground'>Нийт боловсруулсан төлбөр</p>
+            <h3 className='text-2xl font-bold mt-2 text-primary'>{totals.paymentProcessedMNT.toLocaleString()} MNT</h3>
           </CardBox>
         </div>
 
@@ -253,7 +326,7 @@ export default function AnalyticsPage() {
           </div>
 
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-            {COMPETITION_CATEGORIES.map((category) => {
+            {allCategories.map((category) => {
               const count = categoryStats[category] || 0
               const percentage = stats.total > 0 ? ((count / stats.total) * 100).toFixed(1) : '0'
 

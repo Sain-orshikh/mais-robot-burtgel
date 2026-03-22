@@ -1,0 +1,52 @@
+/* App-specific styles */
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Utility classes */
+.text-ld {
+  color: rgb(17, 24, 39);
+}
+
+.dark .text-ld {
+  color: rgb(245, 245, 245);
+}
+
+.bg-background {
+  background-color: white;
+}
+
+.dark .bg-background {
+  background-color: rgb(3, 7, 18);
+}
+
+.bg-muted {
+  background-color: rgb(243, 244, 246);
+}
+
+.dark .bg-muted {
+  background-color: rgb(31, 41, 55);
+}
+
+.text-muted-foreground {
+  color: rgb(75, 85, 99);
+}
+
+.dark .text-muted-foreground {
+  color: rgb(156, 163, 175);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}

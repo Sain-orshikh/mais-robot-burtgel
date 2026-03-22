@@ -20,9 +20,12 @@ const teamSchema = new mongoose.Schema(
         categoryCode: {
             type: String,
             required: true,
-            enum: ['MNR', 'MGR', 'MNA', 'MGA', 'RRC', 'DRC', 'DRA', 'LFG', 'LFH', 'LFL', 'LSR', 'LUR'],
         },
         categoryName: {
+            type: String,
+            required: true,
+        },
+        robotName: {
             type: String,
             required: true,
         },
@@ -39,6 +42,11 @@ const teamSchema = new mongoose.Schema(
             type: String,
             enum: ['active', 'withdrawn'],
             default: 'active',
+        },
+        paymentId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Payment',
+            default: null,
         },
     },
     { timestamps: true }

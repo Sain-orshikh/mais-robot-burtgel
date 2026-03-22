@@ -22,9 +22,6 @@ const adminSchema = new mongoose.Schema({
     },
 },{timestamps: true});
 
-// Drop the email index if it exists
-adminSchema.index({ email: 1 }, { unique: false });
-
 const Admin = mongoose.model("Admin", adminSchema);
 
 export default Admin;

@@ -1,19 +1,22 @@
-'use client'
-
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { useNavigate, Link as RouterLink } from 'react-router-dom'
+
+// Compatibility wrapper
+const Link = RouterLink
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/use-toast'
+import { ThemeToggle } from '@/app/components/shared/ThemeToggle'
+import { usePublicSettings } from '@/hooks/usePublicSettings'
 
 export default function LoginPage() {
-  const router = useRouter()
+  const navigate = useNavigate()
   const { login } = useAuth()
   const { toast } = useToast()
+  const { settings } = usePublicSettings()
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
@@ -50,12 +53,16 @@ export default function LoginPage() {
   }
 
   return (
-    <div className='min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-400 to-blue-500 px-4'>
-      <Card className='w-full max-w-md'>
+    <div className='min-h-screen flex flex-col bg-linear-to-br from-blue-400 to-blue-500 px-4'>
+      <div className='flex justify-end pt-4'>
+        <ThemeToggle />
+      </div>
+      <div className='flex-1 flex items-center justify-center'>
+        <Card className='w-full max-w-md'>
         <CardHeader className='space-y-4 pb-4'>
           <div className='flex justify-center'>
             <img 
-              src='/icons/12.jpg' 
+              src={settings.loginLogoUrl || '/icons/12.jpg'} 
               alt='Logo'
               className='w-32 h-32 object-contain rounded-lg'
             />
@@ -99,15 +106,22 @@ export default function LoginPage() {
               {isLoading ? 'Logging in...' : 'Login'}
             </Button>
 
+            <div className='text-center text-sm text-gray-600'>
+              <Link to='/forgot-password' className='text-blue-600 hover:text-blue-700 font-medium'>
+                Forgot password?
+              </Link>
+            </div>
+
             <div className='text-center text-sm text-gray-600 mt-4'>
               Doesn&apos;t have an account?{' '}
-              <Link href='/register' className='text-blue-600 hover:text-blue-700 font-medium'>
+              <Link to='/register' className='text-blue-600 hover:text-blue-700 font-medium'>
                 register here
               </Link>
             </div>
           </form>
         </CardContent>
       </Card>
+      </div>
     </div>
   )
 }

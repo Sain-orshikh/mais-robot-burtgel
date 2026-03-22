@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label'
 import { Upload, Building2, CreditCard, FileText } from 'lucide-react'
 import { uploadToCloudinary } from '@/lib/cloudinary'
 import { useToast } from '@/hooks/use-toast'
+import heic2any from 'heic2any'
+import { usePublicSettings } from '@/hooks/usePublicSettings'
 
 interface PaymentModalProps {
   isOpen: boolean
@@ -15,6 +17,8 @@ interface PaymentModalProps {
   eventId: string
   eventName: string
   totalTeams: number
+  organisationId: string
+  paymentCount: number
   onPaymentSubmit: (receiptUrl: string) => Promise<void>
 }
 
@@ -24,17 +28,59 @@ export function PaymentModal({
   eventId,
   eventName,
   totalTeams,
+  organisationId,
+  paymentCount,
   onPaymentSubmit,
 }: PaymentModalProps) {
   const { toast } = useToast()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string>('')
   const [uploading, setUploading] = useState(false)
+  const { settings } = usePublicSettings()
+  
+  const bankName = settings.bankName
+  const accountName = settings.bankAccountName
+  const accountNumber = settings.bankAccountNumber
+  
+  // Format payment number with leading zeros (e.g., 001, 002, 003)
+  const paymentNumber = String(paymentCount).padStart(3, '0')
+  const paymentDescription = `${organisationId}-${paymentNumber}`
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
+      const isHeic =
+        file.type === 'image/heic' ||
+        file.type === 'image/heif' ||
+        /\.(heic|heif)$/i.test(file.name)
+
+      let processedFile = file
+
+      if (isHeic) {
+        try {
+          const convertedBlob = await heic2any({
+            blob: file,
+            toType: 'image/jpeg',
+            quality: 0.9,
+          })
+
+          const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob
+          processedFile = new File(
+            [blob as Blob],
+            file.name.replace(/\.(heic|heif)$/i, '.jpg'),
+            { type: 'image/jpeg' }
+          )
+        } catch (error) {
+          toast({
+            title: 'Conversion failed',
+            description: 'Please upload a JPG or PNG image instead',
+            variant: 'destructive',
+          })
+          return
+        }
+      }
+
+      if (processedFile.size > 5 * 1024 * 1024) {
         toast({
           title: 'File too large',
           description: 'Please select an image under 5MB',
@@ -42,13 +88,13 @@ export function PaymentModal({
         })
         return
       }
-      
-      setSelectedFile(file)
+
+      setSelectedFile(processedFile)
       const reader = new FileReader()
       reader.onloadend = () => {
         setPreviewUrl(reader.result as string)
       }
-      reader.readAsDataURL(file)
+      reader.readAsDataURL(processedFile)
     }
   }
 
@@ -84,7 +130,7 @@ export function PaymentModal({
     }
   }
 
-  const registrationFee = totalTeams * 50000 // 50,000₮ per team
+  const registrationFee = totalTeams * 20000 // 20,000₮ per team
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -104,7 +150,7 @@ export function PaymentModal({
               </div>
               <div className='flex justify-between'>
                 <span>Fee per Team:</span>
-                <span className='font-medium'>50,000₮</span>
+                <span className='font-medium'>20,000₮</span>
               </div>
               <div className='flex justify-between pt-2 border-t border-blue-200'>
                 <span className='font-semibold'>Total Amount:</span>
@@ -122,19 +168,19 @@ export function PaymentModal({
             <div className='space-y-2 text-sm'>
               <div className='flex justify-between py-2 border-b'>
                 <span className='text-gray-600'>Bank Name:</span>
-                <span className='font-medium'>Khan Bank</span>
+                <span className='font-medium'>{bankName}</span>
               </div>
               <div className='flex justify-between py-2 border-b'>
                 <span className='text-gray-600'>Account Name:</span>
-                <span className='font-medium'>Mongol Aspiration International School</span>
+                <span className='font-medium'>{accountName}</span>
               </div>
               <div className='flex justify-between py-2 border-b'>
-                <span className='text-gray-600'>Account Number:</span>
-                <span className='font-mono font-bold text-blue-600'>5123 4567 8901 2345</span>
+                <span className='text-gray-600'>Account Number (IBAN):</span>
+                <span className='font-mono font-bold text-blue-600'>{accountNumber}</span>
               </div>
               <div className='flex justify-between py-2'>
                 <span className='text-gray-600'>Description:</span>
-                <span className='font-medium'>Robot Challenge - {eventId.slice(-6)}</span>
+                <span className='font-medium'>{paymentDescription}</span>
               </div>
             </div>
           </div>
@@ -142,7 +188,7 @@ export function PaymentModal({
           {/* Payment Instructions */}
           <div className='bg-yellow-50 border border-yellow-200 rounded-lg p-4'>
             <div className='flex items-start gap-2'>
-              <CreditCard className='text-yellow-600 flex-shrink-0 mt-0.5' size={20} />
+              <CreditCard className='text-yellow-600 mt-0.5' size={20} />
               <div className='text-sm text-gray-700'>
                 <p className='font-medium mb-1'>Payment Instructions:</p>
                 <ol className='list-decimal list-inside space-y-1 text-xs'>
@@ -188,7 +234,7 @@ export function PaymentModal({
                       <p className='text-sm text-gray-600 mb-1'>
                         Click to upload or drag and drop
                       </p>
-                      <p className='text-xs text-gray-500'>PNG, JPG up to 5MB</p>
+                      <p className='text-xs text-gray-500'>PNG, JPG, HEIC up to 5MB (HEIC will be converted)</p>
                     </div>
                     <Input
                       id='receipt'

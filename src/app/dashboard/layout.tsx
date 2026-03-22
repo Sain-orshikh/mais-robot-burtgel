@@ -1,9 +1,7 @@
-'use client'
-
 import { DashboardSidebar } from '@/app/components/dashboard/DashboardSidebar'
 import { DashboardHeader } from '@/app/components/dashboard/DashboardHeader'
 import { useAuth } from '@/hooks/useAuth'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 
 export default function DashboardLayout({
@@ -12,14 +10,17 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const { organisation, loading } = useAuth()
-  const router = useRouter()
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const navigate = useNavigate()
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.innerWidth >= 768
+  })
 
   useEffect(() => {
     if (!loading && !organisation) {
-      router.push('/')
+      navigate('/')
     }
-  }, [organisation, loading, router])
+  }, [organisation, loading, navigate])
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen)
@@ -41,20 +42,39 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className='flex h-screen bg-gray-50'>
-      {/* Sidebar */}
+    <div className='relative h-screen bg-gray-50 md:flex'>
+      {/* Mobile Sidebar Overlay */}
       <div
-        className={`transition-all duration-300 ${
-          isSidebarOpen ? 'w-64' : 'w-0'
-        } overflow-hidden`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 h-screen bg-white transform transition-transform duration-300 md:hidden ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
       >
         <DashboardSidebar />
       </div>
+
+      {/* Desktop Sidebar */}
+      <div
+        className={`hidden md:block transition-all duration-300 overflow-hidden ${
+          isSidebarOpen ? 'w-64' : 'w-0'
+        }`}
+      >
+        <div className='h-full bg-white'>
+          <DashboardSidebar />
+        </div>
+      </div>
+
+      {/* Mobile Backdrop */}
+      {isSidebarOpen && (
+        <div
+          className='fixed inset-0 z-40 bg-black/40 md:hidden'
+          onClick={toggleSidebar}
+        />
+      )}
       
       {/* Main Content */}
-      <div className='flex-1 flex flex-col overflow-hidden'>
+      <div className='flex flex-col overflow-hidden md:flex-1'>
         {/* Header */}
-        <DashboardHeader onToggleSidebar={toggleSidebar} />
+        <DashboardHeader onToggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} />
         
         {/* Page Content */}
         <main className='flex-1 overflow-y-auto bg-gray-100'>

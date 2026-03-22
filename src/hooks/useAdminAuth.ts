@@ -1,10 +1,8 @@
-'use client'
-
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from 'react-router-dom'
 
 export const useAdminAuth = () => {
-  const router = useRouter()
+  const navigate = useNavigate()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isChecking, setIsChecking] = useState(true)
 
@@ -17,19 +15,19 @@ export const useAdminAuth = () => {
         setIsChecking(false)
         
         if (!authenticated) {
-          router.replace('/admin/login')
+          navigate('/admin/login', { replace: true })
         }
       }
     }
 
     checkAuth()
-  }, [router])
+  }, [navigate])
 
   const logout = () => {
     localStorage.removeItem('adminAuth')
     localStorage.removeItem('adminUsername')
     localStorage.removeItem('adminLoginTime')
-    router.push('/admin/login')
+    navigate('/admin/login')
   }
 
   const getAdminUsername = () => {

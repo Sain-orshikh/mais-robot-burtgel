@@ -1,14 +1,12 @@
-'use client'
-
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from 'react-router-dom'
 import { eventApi } from '@/lib/api/events'
 import { Event } from '@/types/models'
 import { Star } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 export default function EventsPage() {
-  const router = useRouter()
+  const navigate = useNavigate()
   const { toast } = useToast()
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
@@ -53,13 +51,13 @@ export default function EventsPage() {
         {events.map((event) => (
           <div
             key={event._id}
-            onClick={() => router.push(`/dashboard/events/${event._id}`)}
+            onClick={() => navigate(`/dashboard/events/${event._id}`)}
             className='bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow cursor-pointer'
           >
             {/* Event Image/Icon */}
             <div className='h-48 flex items-center justify-center overflow-hidden'>
               <img 
-                src='/icons/12.jpg' 
+                src={event.imageUrl || '/icons/12.jpg'} 
                 alt={event.name}
                 className='w-full h-full object-cover'
               />
@@ -89,8 +87,11 @@ export default function EventsPage() {
               {/* Dates */}
               <div className='mt-3 text-xs text-gray-600 text-center space-y-1'>
                 <div>
-                  <span className='font-medium'>Registration Deadline:</span>{' '}
-                  {new Date(event.registrationDeadline).toLocaleDateString('en-US', {
+                  <span className='font-medium'>Registration Period:</span>{' '}
+                  {new Date(event.registrationStart).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                  })} - {new Date(event.registrationEnd).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'short',
                     day: 'numeric',

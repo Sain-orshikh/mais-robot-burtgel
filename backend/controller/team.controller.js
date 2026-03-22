@@ -3,17 +3,16 @@ import Contestant from "../models/contestant.model.js";
 import Coach from "../models/coach.model.js";
 import Event from "../models/event.model.js";
 import { getNextTeamId } from "../utils/generateIds.js";
-import { EVENT_CATEGORIES } from "../config/categories.js";
 
 // Create a new team and register for event
 export const createTeam = async (req, res) => {
     try {
-        const { eventId, categoryCode, contestantIds, coachId } = req.body;
+        const { eventId, categoryCode, contestantIds, coachId, robotName } = req.body;
         const organisationId = req.organisation._id;
 
         // Validate inputs
-        if (!eventId || !categoryCode || !contestantIds || contestantIds.length === 0 || !coachId) {
-            return res.status(400).json({ error: "Event, category, contestants, and coach are required" });
+        if (!eventId || !categoryCode || !contestantIds || contestantIds.length === 0 || !coachId || !robotName) {
+            return res.status(400).json({ error: "Event, category, robot name, contestants, and coach are required" });
         }
 
         // Get event
@@ -22,36 +21,49 @@ export const createTeam = async (req, res) => {
             return res.status(404).json({ error: "Event not found" });
         }
 
-        // Check if registration deadline has passed
-        if (new Date() > new Date(event.registrationDeadline)) {
-            return res.status(400).json({ error: "Registration deadline has passed" });
+        // Check if registration is open
+        const now = new Date();
+        if (now < new Date(event.registrationStart)) {
+            return res.status(400).json({ error: "Registration has not started yet" });
+        }
+        if (now > new Date(event.registrationEnd)) {
+            return res.status(400).json({ error: "Registration has ended" });
         }
 
-        // Get category configuration
-        const categoryConfig = EVENT_CATEGORIES.find(cat => cat.code === categoryCode);
-        if (!categoryConfig) {
-            return res.status(400).json({ error: "Invalid category code" });
+        // Resolve category and constraints from this event's configured categories
+        const eventCategory = event.categories.find(
+            (cat) => cat.categoryCode === categoryCode || cat.name === categoryCode
+        );
+        if (!eventCategory) {
+            return res.status(400).json({ error: "Invalid category for this event" });
         }
 
         // Check team size constraints
-        if (contestantIds.length < categoryConfig.minContestantsPerTeam || 
-            contestantIds.length > categoryConfig.maxContestantsPerTeam) {
+        if (contestantIds.length < eventCategory.minContestantsPerTeam || 
+            contestantIds.length > eventCategory.maxContestantsPerTeam) {
             return res.status(400).json({ 
-                error: `Team must have between ${categoryConfig.minContestantsPerTeam} and ${categoryConfig.maxContestantsPerTeam} contestants` 
+                error: `Team must have between ${eventCategory.minContestantsPerTeam} and ${eventCategory.maxContestantsPerTeam} contestants` 
             });
         }
 
         // Check if org has reached max teams for this category in this event
+        const rejectedRegs = await Event.findOne({ _id: eventId }).select('registrations');
+        const rejectedTeamIds = (rejectedRegs?.registrations || [])
+            .filter((reg) => reg.organisationId?.toString() === organisationId.toString() && reg.status === 'rejected')
+            .flatMap((reg) => Array.isArray(reg.teamIds) ? reg.teamIds : [])
+            .map((id) => id.toString());
+
         const existingTeams = await Team.countDocuments({
             organisationId,
             eventId,
             categoryCode,
-            status: 'active'
+            status: 'active',
+            _id: rejectedTeamIds.length > 0 ? { $nin: rejectedTeamIds } : { $exists: true },
         });
 
-        if (existingTeams >= categoryConfig.maxTeamsPerOrg) {
+        if (existingTeams >= eventCategory.maxTeamsPerOrg) {
             return res.status(400).json({ 
-                error: `Maximum ${categoryConfig.maxTeamsPerOrg} team(s) per organization for this category` 
+                error: `Maximum ${eventCategory.maxTeamsPerOrg} team(s) per organization for this category` 
             });
         }
 
@@ -84,7 +96,8 @@ export const createTeam = async (req, res) => {
             organisationId,
             eventId,
             categoryCode,
-            categoryName: categoryConfig.name,
+            categoryName: eventCategory.name,
+            robotName,
             contestantIds,
             coachId,
         });
@@ -103,19 +116,19 @@ export const createTeam = async (req, res) => {
             { $push: { participations: { eventId, category: categoryCode } } }
         );
 
-        // Add team to event registrations
-        await Event.findByIdAndUpdate(
-            eventId,
-            { 
-                $push: { 
+        // Add team to Event.registrations for tracking
+        await Event.updateOne(
+            { _id: eventId },
+            {
+                $push: {
                     registrations: {
                         organisationId,
                         category: categoryCode,
-                        contestantIds,
+                        teamIds: [team._id],
                         coachId,
-                        teamId: team._id
-                    }
-                } 
+                        status: "pending",
+                    },
+                },
             }
         );
 
@@ -203,8 +216,31 @@ export const withdrawTeam = async (req, res) => {
             return res.status(404).json({ error: "Team not found" });
         }
 
+        const eventId = team.eventId;
+        const contestantIds = team.contestantIds;
+        const coachId = team.coachId;
+        const categoryCode = team.categoryCode;
+
         // Delete the team entirely so organization can register a new one
         await Team.findByIdAndDelete(id);
+
+        // Remove team from Event.registrations
+        await Event.updateOne(
+            { _id: eventId },
+            { $pull: { registrations: { teamIds: id } } }
+        );
+
+        // Clean up participations from contestants
+        await Contestant.updateMany(
+            { _id: { $in: contestantIds } },
+            { $pull: { participations: { eventId, category: categoryCode } } }
+        );
+
+        // Clean up participation from coach
+        await Coach.findByIdAndUpdate(
+            coachId,
+            { $pull: { participations: { eventId, category: categoryCode } } }
+        );
 
         res.status(200).json({ message: "Team withdrawn successfully" });
     } catch (error) {

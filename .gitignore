@@ -15,7 +15,8 @@
 
 # production
 /build
-
+/dist*
+/.htaccess
 # misc
 .DS_Store
 *.pem

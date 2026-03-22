@@ -1,13 +1,15 @@
 import Event from "../models/event.model.js";
 import Contestant from "../models/contestant.model.js";
 import Coach from "../models/coach.model.js";
+import Team from "../models/team.model.js";
+import Payment from "../models/payment.model.js";
 
 // Create a new event (Admin only - would need admin middleware)
 export const createEvent = async (req, res) => {
     try {
-        const { name, description, startDate, endDate, registrationDeadline, location, categories } = req.body;
+        const { name, description, startDate, endDate, registrationStart, registrationEnd, location, categories, imageUrl } = req.body;
 
-        if (!name || !description || !startDate || !endDate || !registrationDeadline || !location || !categories) {
+        if (!name || !description || !startDate || !endDate || !registrationStart || !registrationEnd || !location || !categories) {
             return res.status(400).json({ error: "All fields are required" });
         }
 
@@ -16,9 +18,11 @@ export const createEvent = async (req, res) => {
             description,
             startDate,
             endDate,
-            registrationDeadline,
+            registrationStart,
+            registrationEnd,
             location,
             categories,
+            imageUrl: imageUrl || '/icons/12.jpg',
         });
 
         await event.save();
@@ -47,9 +51,10 @@ export const getEventById = async (req, res) => {
         const { id } = req.params;
 
         const event = await Event.findById(id)
-            .populate('registrations.organisationId', 'organisationId typeDetail')
+            .populate('registrations.organisationId', 'organisationId typeDetail type aimag _id ner ovog phoneNumber email')
             .populate('registrations.contestantIds', 'ner ovog')
-            .populate('registrations.coachId', 'ner ovog');
+            .populate('registrations.coachId', 'ner ovog')
+            .populate('registrations.teamIds', 'teamId categoryCode categoryName');
 
         if (!event) {
             return res.status(404).json({ error: "Event not found" });
@@ -80,13 +85,19 @@ export const registerTeam = async (req, res) => {
             return res.status(404).json({ error: "Event not found" });
         }
 
-        // Check if registration deadline has passed
-        if (new Date() > new Date(event.registrationDeadline)) {
-            return res.status(400).json({ error: "Registration deadline has passed" });
+        // Check if registration is open
+        const now = new Date();
+        if (now < new Date(event.registrationStart)) {
+            return res.status(400).json({ error: "Registration has not started yet" });
+        }
+        if (now > new Date(event.registrationEnd)) {
+            return res.status(400).json({ error: "Registration has ended" });
         }
 
         // Find the category in the event
-        const eventCategory = event.categories.find(cat => cat.name === category);
+        const eventCategory = event.categories.find(
+            (cat) => cat.name === category || cat.categoryCode === category
+        );
         if (!eventCategory) {
             return res.status(400).json({ error: "Category not found in this event" });
         }
@@ -101,7 +112,10 @@ export const registerTeam = async (req, res) => {
 
         // Check if org has reached max teams for this category
         const existingTeams = event.registrations.filter(
-            reg => reg.organisationId.toString() === organisationId.toString() && reg.category === category
+            (reg) =>
+                reg.organisationId.toString() === organisationId.toString() &&
+                (reg.category === category || reg.category === eventCategory.name || reg.category === eventCategory.categoryCode) &&
+                reg.status !== 'rejected'
         );
 
         if (existingTeams.length >= eventCategory.maxTeamsPerOrg) {
@@ -133,7 +147,7 @@ export const registerTeam = async (req, res) => {
         // Add registration to event
         event.registrations.push({
             organisationId,
-            category,
+            category: eventCategory.categoryCode || eventCategory.name,
             contestantIds,
             coachId,
         });
@@ -193,6 +207,11 @@ export const updateEvent = async (req, res) => {
         const { id } = req.params;
         const updates = req.body;
 
+        // Keep existing image if not provided
+        if (typeof updates.imageUrl === "undefined") {
+            delete updates.imageUrl;
+        }
+
         const event = await Event.findByIdAndUpdate(id, updates, { new: true });
 
         if (!event) {
@@ -231,6 +250,140 @@ export const deleteEvent = async (req, res) => {
         res.status(200).json({ message: "Event deleted successfully" });
     } catch (error) {
         console.log("Error in deleteEvent controller", error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+// Approve a registration (Admin only)
+export const approveRegistration = async (req, res) => {
+    try {
+        const { eventId, registrationId } = req.params;
+
+        if (!registrationId) {
+            return res.status(400).json({ error: "Registration ID is required" });
+        }
+
+        const event = await Event.findOneAndUpdate(
+            { _id: eventId, "registrations._id": registrationId },
+            {
+                $set: {
+                    "registrations.$.status": "approved",
+                    "registrations.$.rejectionReason": null,
+                },
+            },
+            { new: true }
+        );
+
+        if (!event) {
+            return res.status(404).json({ error: "Event or registration not found" });
+        }
+
+        const updatedRegistration = event.registrations.id(registrationId);
+
+        if (updatedRegistration?.paymentId) {
+            await Payment.updateOne(
+                { _id: updatedRegistration.paymentId },
+                { $set: { status: "approved" } }
+            );
+        }
+
+        res.status(200).json({ message: "Registration approved successfully", registration: updatedRegistration });
+    } catch (error) {
+        console.log("Error in approveRegistration controller", error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+// Reject a registration (Admin only)
+export const rejectRegistration = async (req, res) => {
+    try {
+        const { eventId, registrationId } = req.params;
+        const { rejectionReason } = req.body;
+
+        if (!rejectionReason || rejectionReason.trim() === '') {
+            return res.status(400).json({ error: "Rejection reason is required" });
+        }
+
+        if (!registrationId) {
+            return res.status(400).json({ error: "Registration ID is required" });
+        }
+
+        const event = await Event.findOneAndUpdate(
+            { _id: eventId, "registrations._id": registrationId },
+            {
+                $set: {
+                    "registrations.$.status": "rejected",
+                    "registrations.$.rejectionReason": rejectionReason,
+                },
+            },
+            { new: true }
+        );
+
+        if (!event) {
+            return res.status(404).json({ error: "Event or registration not found" });
+        }
+
+        const updatedRegistration = event.registrations.id(registrationId);
+
+        // Reset payment status for teams related to this registration (org + event + category)
+        const organisationId = updatedRegistration?.organisationId;
+        const regTeamIds = Array.isArray(updatedRegistration?.teamIds) ? updatedRegistration.teamIds : [];
+        const regCategory = updatedRegistration?.category;
+
+        if (organisationId) {
+            const teamsToReset = regTeamIds.length > 0
+                ? await Team.find({ _id: { $in: regTeamIds } }).select("_id paymentId")
+                : await Team.find({
+                    eventId,
+                    organisationId,
+                    $or: [
+                        { categoryCode: regCategory },
+                        { categoryName: regCategory },
+                    ],
+                }).select("_id paymentId");
+
+            const teamIdsToReset = teamsToReset.map((t) => t._id);
+
+            if (teamIdsToReset.length > 0) {
+                // Unlink payment from teams
+                await Team.updateMany(
+                    { _id: { $in: teamIdsToReset } },
+                    { $set: { paymentId: null } }
+                );
+
+                // Remove teamIds from payments; delete empty payments
+                const paymentsQuery = updatedRegistration?.paymentId
+                    ? { _id: updatedRegistration.paymentId }
+                    : {
+                        organisationId,
+                        eventId,
+                        teamIds: { $in: teamIdsToReset },
+                    };
+
+                const payments = await Payment.find(paymentsQuery).select("_id teamIds");
+
+                await Promise.all(
+                    payments.map(async (payment) => {
+                        const remainingTeamIds = payment.teamIds.filter(
+                            (teamId) => !teamIdsToReset.some((t) => t.toString() === teamId.toString())
+                        );
+
+                        if (remainingTeamIds.length === 0) {
+                            await Payment.deleteOne({ _id: payment._id });
+                        } else {
+                            await Payment.updateOne(
+                                { _id: payment._id },
+                                { $set: { teamIds: remainingTeamIds } }
+                            );
+                        }
+                    })
+                );
+            }
+        }
+
+        res.status(200).json({ message: "Registration rejected successfully", registration: updatedRegistration });
+    } catch (error) {
+        console.log("Error in rejectRegistration controller", error.message);
         res.status(500).json({ error: "Internal server error" });
     }
 };

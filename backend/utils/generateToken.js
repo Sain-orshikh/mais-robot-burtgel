@@ -10,5 +10,6 @@ export const generateTokenAndSetCookie = (adminId, res) => {
         httpOnly: true, // prevents attack from script
         sameSite: "none", // Allow cross-domain cookies
         secure: true, // Required for sameSite: none
+        path: "/",
     })
 }

@@ -1,7 +1,5 @@
-'use client'
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from 'react-router-dom'
 
 interface Organisation {
   _id: string
@@ -43,9 +41,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [organisation, setOrganisation] = useState<Organisation | null>(null)
   const [loading, setLoading] = useState(true)
-  const router = useRouter()
+  const navigate = useNavigate()
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
   useEffect(() => {
     checkAuth()
@@ -60,9 +58,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (response.ok) {
         const data = await response.json()
         setOrganisation(data)
+      } else {
+        setOrganisation(null)
       }
     } catch (error) {
       console.error('Auth check failed:', error)
+      setOrganisation(null)
     } finally {
       setLoading(false)
     }
@@ -85,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const data = await response.json()
     setOrganisation(data)
-    router.push('/dashboard')
+    navigate('/dashboard')
   }
 
   const register = async (data: RegisterData) => {
@@ -105,16 +106,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const orgData = await response.json()
     setOrganisation(orgData)
-    router.push('/dashboard')
+    navigate('/dashboard')
   }
 
   const logout = async () => {
-    await fetch(`${API_URL}/api/organisations/logout`, {
-      method: 'POST',
-      credentials: 'include',
-    })
+    try {
+      await fetch(`${API_URL}/api/organisations/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+    } catch (error) {
+      console.error('Logout request failed:', error)
+    }
+
     setOrganisation(null)
-    router.push('/')
+    navigate('/')
   }
 
   return (

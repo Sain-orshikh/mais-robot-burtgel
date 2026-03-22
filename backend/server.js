@@ -14,6 +14,8 @@ import coachRoutes from "./routes/coach.route.js";
 import eventRoutes from "./routes/event.route.js";
 import teamRoutes from "./routes/team.route.js";
 import paymentRoutes from "./routes/payment.route.js";
+import exportRoutes from "./routes/export.route.js";
+import systemSettingsRoutes from "./routes/systemSettings.route.js";
 import connectMongoDB from "./db/connectMongoDB.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -40,18 +42,23 @@ const allowedOrigins = [
     process.env.FRONTEND_URL
 ].filter(Boolean);
 
-app.use(cors({
+const corsOptions = {
     origin: function (origin, callback) {
         // Allow requests with no origin (mobile apps, Postman, etc.)
         if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) === -1) {
+        const isAllowed = allowedOrigins.includes(origin) || origin.endsWith('.vercel.app');
+        if (!isAllowed) {
             return callback(new Error('CORS policy violation'), false);
         }
         return callback(null, true);
     },
-    methods: "GET, POST, PUT, DELETE",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
-}));
+    optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 
 app.use(express.json({limit: "5mb"})); // to parse req.body
 app.use(express.urlencoded({ extended: true })); // to parse form data
@@ -66,6 +73,8 @@ app.use('/api/coaches', coachRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/export', exportRoutes);
+app.use('/api/settings', systemSettingsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

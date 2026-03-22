@@ -47,6 +47,7 @@ export interface Team {
   eventId: string
   categoryCode: string
   categoryName: string
+  robotName: string
   contestantIds: string[] | Contestant[]
   coachId: string | Coach
   status: 'active' | 'withdrawn'
@@ -68,9 +69,12 @@ export interface Event {
   description: string
   startDate: string
   endDate: string
-  registrationDeadline: string
+  registrationStart: string
+  registrationEnd: string
   location: string
+  imageUrl?: string
   categories: {
+    categoryCode?: string
     name: string
     description?: string
     maxTeamsPerOrg: number
@@ -78,13 +82,18 @@ export interface Event {
     maxContestantsPerTeam: number
   }[]
   registrations: {
+    _id: string
     organisationId: string
     category: string
-    contestantIds: string[]
-    coachId: string
-    teamId: string
+    contestantIds?: string[]
+    coachId?: string
+    teamId?: string
+    teamIds?: string[]
+    categories?: string[]
+    paymentId?: string
     registeredAt: string
     status: 'pending' | 'approved' | 'rejected'
+    rejectionReason?: string | null
   }[]
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled'
   createdAt: string
@@ -115,6 +124,7 @@ export interface CoachFormData {
 export interface TeamFormData {
   eventId: string
   categoryCode: string
+  robotName: string
   contestantIds: string[]
   coachId: string
 }
