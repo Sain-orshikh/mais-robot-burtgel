@@ -4,6 +4,22 @@ import Coach from "../models/coach.model.js";
 import Team from "../models/team.model.js";
 import Payment from "../models/payment.model.js";
 
+const sortCategories = (categories = []) => {
+    return [...categories].sort((a, b) => {
+        const aKey = String(a?.name || a?.categoryCode || "");
+        const bKey = String(b?.name || b?.categoryCode || "");
+        return aKey.localeCompare(bKey, undefined, { sensitivity: "base" });
+    });
+};
+
+const serializeEventWithSortedCategories = (eventDoc) => {
+    const event = typeof eventDoc?.toObject === "function" ? eventDoc.toObject() : { ...eventDoc };
+    return {
+        ...event,
+        categories: sortCategories(event.categories),
+    };
+};
+
 // Create a new event (Admin only - would need admin middleware)
 export const createEvent = async (req, res) => {
     try {
@@ -38,7 +54,7 @@ export const createEvent = async (req, res) => {
 export const getAllEvents = async (req, res) => {
     try {
         const events = await Event.find().sort({ startDate: -1 });
-        res.status(200).json(events);
+        res.status(200).json(events.map(serializeEventWithSortedCategories));
     } catch (error) {
         console.log("Error in getAllEvents controller", error.message);
         res.status(500).json({ error: "Internal server error" });
@@ -60,7 +76,7 @@ export const getEventById = async (req, res) => {
             return res.status(404).json({ error: "Event not found" });
         }
 
-        res.status(200).json(event);
+        res.status(200).json(serializeEventWithSortedCategories(event));
     } catch (error) {
         console.log("Error in getEventById controller", error.message);
         res.status(500).json({ error: "Internal server error" });
