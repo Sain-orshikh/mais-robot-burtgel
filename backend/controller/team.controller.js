@@ -116,6 +116,22 @@ export const createTeam = async (req, res) => {
             { $push: { participations: { eventId, category: categoryCode } } }
         );
 
+        // Add team to Event.registrations for tracking
+        await Event.updateOne(
+            { _id: eventId },
+            {
+                $push: {
+                    registrations: {
+                        organisationId,
+                        category: categoryCode,
+                        teamIds: [team._id],
+                        coachId,
+                        status: "pending",
+                    },
+                },
+            }
+        );
+
         const populatedTeam = await Team.findById(team._id)
             .populate('contestantIds', 'contestantId ner ovog email')
             .populate('coachId', 'coachId ner ovog email')
@@ -200,8 +216,31 @@ export const withdrawTeam = async (req, res) => {
             return res.status(404).json({ error: "Team not found" });
         }
 
+        const eventId = team.eventId;
+        const contestantIds = team.contestantIds;
+        const coachId = team.coachId;
+        const categoryCode = team.categoryCode;
+
         // Delete the team entirely so organization can register a new one
         await Team.findByIdAndDelete(id);
+
+        // Remove team from Event.registrations
+        await Event.updateOne(
+            { _id: eventId },
+            { $pull: { registrations: { teamIds: id } } }
+        );
+
+        // Clean up participations from contestants
+        await Contestant.updateMany(
+            { _id: { $in: contestantIds } },
+            { $pull: { participations: { eventId, category: categoryCode } } }
+        );
+
+        // Clean up participation from coach
+        await Coach.findByIdAndUpdate(
+            coachId,
+            { $pull: { participations: { eventId, category: categoryCode } } }
+        );
 
         res.status(200).json({ message: "Team withdrawn successfully" });
     } catch (error) {

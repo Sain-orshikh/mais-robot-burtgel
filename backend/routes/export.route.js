@@ -5,6 +5,7 @@ import {
     exportCoaches,
     exportOrganisations,
     exportAnalytics,
+    exportOrganisationReport,
 } from "../controller/export.controller.js";
 
 const router = express.Router();
@@ -15,5 +16,6 @@ router.get("/contestants", exportContestants);
 router.get("/coaches", exportCoaches);
 router.get("/organisations", exportOrganisations);
 router.get("/analytics", exportAnalytics);
+router.get("/organisation-report", exportOrganisationReport);
 
 export default router;

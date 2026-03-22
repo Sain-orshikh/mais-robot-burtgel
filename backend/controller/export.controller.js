@@ -254,3 +254,120 @@ export const exportAnalytics = async (req, res) => {
         res.status(500).json({ error: "Failed to export analytics" });
     }
 };
+
+// Export organisation report with teams and members (with approved payments)
+export const exportOrganisationReport = async (req, res) => {
+    try {
+        const { organisationId, eventId } = req.query;
+
+        if (!organisationId) {
+            return res.status(400).json({ error: "organisationId is required" });
+        }
+
+        if (!eventId) {
+            return res.status(400).json({ error: "eventId is required" });
+        }
+
+        // Fetch organisation details
+        const organisation = await Organisation.findById(organisationId);
+        if (!organisation) {
+            return res.status(404).json({ error: "Organisation not found" });
+        }
+
+        // Fetch event details
+        const event = await Event.findById(eventId);
+        let eventName = "MonRobot Challenge 2026";
+        let eventCode = "MN2026";
+        if (event) {
+            eventName = event.name || eventName;
+            eventCode = event.eventCode || eventCode;
+        } else {
+            return res.status(404).json({ error: "Event not found" });
+        }
+
+        // Fetch teams for this organisation AND event with approved payments
+        const teams = await Team.find({
+            organisationId: organisationId,
+            eventId: eventId,
+            status: "active"
+        })
+            .populate({
+                path: "paymentId",
+                select: "_id status"
+            })
+            .populate({
+                path: "contestantIds",
+                select: "_id contestantId ner ovog email phoneNumber"
+            });
+
+        // Filter teams with approved payments
+        const approvedTeams = teams.filter(team => 
+            team.paymentId && team.paymentId.status === "approved"
+        );
+
+        // Collect unique members (contestants) from approved teams
+        const membersMap = new Map();
+        const teamsList = [];
+
+        approvedTeams.forEach(team => {
+            const memberIds = team.contestantIds
+                .map(member => member.contestantId)
+                .join(", ");
+
+            teamsList.push({
+                teamId: team.teamId,
+                robotName: team.robotName,
+                memberIds: memberIds,
+                contestants: team.contestantIds
+            });
+
+            // Add members to map
+            team.contestantIds.forEach(contestant => {
+                if (contestant.contestantId && !membersMap.has(contestant.contestantId)) {
+                    membersMap.set(contestant.contestantId, {
+                        contestantId: contestant.contestantId,
+                        ner: contestant.ner,
+                        ovog: contestant.ovog,
+                        fullName: `${contestant.ner} ${contestant.ovog}`.trim(),
+                        email: contestant.email,
+                        phoneNumber: contestant.phoneNumber,
+                        teams: []
+                    });
+                }
+            });
+        });
+
+        // Map members to their teams
+        teamsList.forEach(team => {
+            team.contestants.forEach(contestant => {
+                const memberData = membersMap.get(contestant.contestantId);
+                if (memberData && !memberData.teams.includes(team.teamId)) {
+                    memberData.teams.push(team.teamId);
+                }
+            });
+        });
+
+        // Prepare response with structured data
+        res.json({
+            event: {
+                name: eventName,
+                code: eventCode,
+            },
+            organisation: {
+                id: organisation.organisationId,
+                name: organisation.typeDetail,
+                type: organisation.type,
+                aimag: organisation.aimag,
+            },
+            summary: {
+                totalMembers: membersMap.size,
+                totalTeams: teamsList.length,
+            },
+            teams: teamsList,
+            members: Array.from(membersMap.values())
+        });
+    } catch (error) {
+        console.error("Error exporting organisation report:", error.message);
+        res.status(500).json({ error: "Failed to export organisation report" });
+    }
+};

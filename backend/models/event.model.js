@@ -80,10 +80,6 @@ const eventSchema = new mongoose.Schema(
                     type: mongoose.Schema.Types.ObjectId,
                     ref: 'Coach',
                 },
-                teamId: {
-                    type: mongoose.Schema.Types.ObjectId,
-                    ref: 'Team',
-                },
                 teamIds: [{
                     type: mongoose.Schema.Types.ObjectId,
                     ref: 'Team',

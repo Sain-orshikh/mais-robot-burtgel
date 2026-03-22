@@ -85,6 +85,9 @@ export const submitPayment = async (req, res) => {
                 )
             );
 
+            // Get coachId from first team
+            const firstTeamCoachId = teams.length > 0 ? teams[0].coachId : null;
+
             // Avoid duplicate grouped registrations for the same payment or teams
             const existingGrouped = await Event.findOne({
                 _id: eventId,
@@ -103,6 +106,7 @@ export const submitPayment = async (req, res) => {
                                 organisationId,
                                 teamIds,
                                 categories,
+                                coachId: firstTeamCoachId,
                                 paymentId: payment._id,
                                 status: "pending",
                             },

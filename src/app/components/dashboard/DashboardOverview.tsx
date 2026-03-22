@@ -3,12 +3,13 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import CardBox from '@/app/components/shared/CardBox'
-import { UserPlus, Users, Calendar, Trophy, CheckCircle2, AlertCircle, ArrowRight, Info } from 'lucide-react'
+import { UserPlus, Users, Calendar, Trophy, CheckCircle2, AlertCircle, ArrowRight, Info, Download } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { contestantApi } from '@/lib/api/contestants'
 import { coachApi } from '@/lib/api/coaches'
 import { teamApi } from '@/lib/api/teams'
 import { eventApi } from '@/lib/api/events'
+import { OrganisationReportModal } from '@/app/components/dashboard/OrganisationReportModal'
 
 export function DashboardOverview() {
   const { organisation } = useAuth()
@@ -19,6 +20,7 @@ export function DashboardOverview() {
     upcomingEvents: 0,
   })
   const [loading, setLoading] = useState(true)
+  const [reportModalOpen, setReportModalOpen] = useState(false)
 
   useEffect(() => {
     fetchStats()
@@ -268,6 +270,14 @@ export function DashboardOverview() {
                   Browse Events
                 </Button>
               </Link>
+              <Button 
+                onClick={() => setReportModalOpen(true)}
+                className='w-full bg-indigo-500 hover:bg-indigo-600 mt-1' 
+                size='sm'
+              >
+                <Download className='mr-2' size={16} />
+                Download CSV
+              </Button>
             </CardContent>
           </Card>
 
@@ -336,6 +346,11 @@ export function DashboardOverview() {
           </Card>
         </div>
       </div>
+
+      <OrganisationReportModal 
+        open={reportModalOpen}
+        onOpenChange={setReportModalOpen}
+      />
     </div>
   )
 }
