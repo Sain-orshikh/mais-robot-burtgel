@@ -146,8 +146,22 @@ export const exportOrganisations = async (req, res) => {
         const enrichedOrgs = await Promise.all(
             organisations.map(async (org) => {
                 const teamCount = await Team.countDocuments({ organisationId: org._id });
+                const safeOrganisationId = org.organisationId || org._id?.toString() || "";
+
                 return {
-                    ...org.toObject(),
+                    // Keep _id aligned with business ID for CSV consumers that prioritize _id.
+                    _id: safeOrganisationId,
+                    organisationId: safeOrganisationId,
+                    type: org.type,
+                    typeDetail: org.typeDetail,
+                    aimag: org.aimag,
+                    phoneNumber: org.phoneNumber,
+                    ner: org.ner,
+                    ovog: org.ovog,
+                    registriinDugaar: org.registriinDugaar,
+                    email: org.email,
+                    createdAt: org.createdAt,
+                    updatedAt: org.updatedAt,
                     teamCount,
                 };
             })
