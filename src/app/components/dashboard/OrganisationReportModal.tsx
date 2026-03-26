@@ -149,11 +149,12 @@ export function OrganisationReportModal({ open, onOpenChange }: OrganisationRepo
         vertical: 'middle',
       }
 
-      // Row 1: Event Header
-      const eventRow1 = worksheet.addRow(['', '', reportData.event.name, reportData.event.code])
-      eventRow1.getCell(3).font = headerFont
-      eventRow1.getCell(3).fill = headerFill
-      eventRow1.getCell(3).alignment = headerAlignment
+      // Row 1: Event Header - Merge columns A:C for event name
+      const eventRow1 = worksheet.addRow([reportData.event.name, '', '', reportData.event.code])
+      worksheet.mergeCells('A1:C1')
+      eventRow1.getCell(1).font = headerFont
+      eventRow1.getCell(1).fill = headerFill
+      eventRow1.getCell(1).alignment = headerAlignment
       eventRow1.getCell(4).font = headerFont
       eventRow1.getCell(4).fill = headerFill
       eventRow1.getCell(4).alignment = headerAlignment
@@ -161,25 +162,31 @@ export function OrganisationReportModal({ open, onOpenChange }: OrganisationRepo
       // Row 2: Blank
       worksheet.addRow([])
 
-      // Row 3: Organization Details Header
-      const orgHeaderRow = worksheet.addRow(['', '', 'Organization ID', 'Organization Name'])
-      orgHeaderRow.getCell(3).font = headerFont
-      orgHeaderRow.getCell(3).fill = headerFill
-      orgHeaderRow.getCell(3).alignment = headerAlignment
+      // Row 3: Organization Details Header - Merge columns A:C
+      const orgHeaderRow = worksheet.addRow(['Organization ID', '', '', 'Organization Name'])
+      worksheet.mergeCells('A3:C3')
+      orgHeaderRow.getCell(1).font = headerFont
+      orgHeaderRow.getCell(1).fill = headerFill
+      orgHeaderRow.getCell(1).alignment = headerAlignment
       orgHeaderRow.getCell(4).font = headerFont
       orgHeaderRow.getCell(4).fill = headerFill
       orgHeaderRow.getCell(4).alignment = headerAlignment
 
-      // Row 4: Organization Details Data
-      const orgDataRow = worksheet.addRow(['', '', reportData.organisation.id, reportData.organisation.name])
-      orgDataRow.getCell(3).alignment = { horizontal: 'center', vertical: 'middle' }
+      // Row 4: Organization Details Data - Merge columns A:C
+      const orgDataRow = worksheet.addRow([reportData.organisation.id, '', '', reportData.organisation.name])
+      worksheet.mergeCells('A4:C4')
+      orgDataRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' }
       orgDataRow.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' }
 
       // Row 5: Blank
       worksheet.addRow([])
 
-      // Row 6: Summary Header
-      const summaryHeaderRow = worksheet.addRow(['', '', 'Total Member', 'Total Team'])
+      // Row 6: Summary Header - Total Coach in merged columns A:B
+      const summaryHeaderRow = worksheet.addRow(['Total Coach', '', 'Total Member', 'Total Team'])
+      worksheet.mergeCells('A6:B6')
+      summaryHeaderRow.getCell(1).font = headerFont
+      summaryHeaderRow.getCell(1).fill = headerFill
+      summaryHeaderRow.getCell(1).alignment = headerAlignment
       summaryHeaderRow.getCell(3).font = headerFont
       summaryHeaderRow.getCell(3).fill = headerFill
       summaryHeaderRow.getCell(3).alignment = headerAlignment
@@ -187,8 +194,12 @@ export function OrganisationReportModal({ open, onOpenChange }: OrganisationRepo
       summaryHeaderRow.getCell(4).fill = headerFill
       summaryHeaderRow.getCell(4).alignment = headerAlignment
 
-      // Row 7: Summary Data
-      const summaryDataRow = worksheet.addRow(['', '', reportData.summary.totalMembers, reportData.summary.totalTeams])
+      // Row 7: Summary Data - Total Coach in merged columns A:B
+      const totalCoaches = reportData.coaches ? reportData.coaches.length : 0
+      const summaryDataRow = worksheet.addRow([totalCoaches, '', reportData.summary.totalMembers, reportData.summary.totalTeams])
+      worksheet.mergeCells('A7:B7')
+      summaryDataRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' }
+      summaryDataRow.getCell(1).font = { size: 12, bold: true }
       summaryDataRow.getCell(3).alignment = { horizontal: 'center', vertical: 'middle' }
       summaryDataRow.getCell(3).font = { size: 12, bold: true }
       summaryDataRow.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' }
@@ -251,12 +262,43 @@ export function OrganisationReportModal({ open, onOpenChange }: OrganisationRepo
         memberRow.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' }
       })
 
+      // Blank rows
+      worksheet.addRow([])
+      worksheet.addRow([])
+
+      // Coaches Header
+      const coachesHeaderRow = worksheet.addRow(['№', 'Coach ID', 'Coach Name', 'Team ID'])
+      coachesHeaderRow.getCell(1).font = headerFont
+      coachesHeaderRow.getCell(1).fill = headerFill
+      coachesHeaderRow.getCell(1).alignment = headerAlignment
+      coachesHeaderRow.getCell(2).font = headerFont
+      coachesHeaderRow.getCell(2).fill = headerFill
+      coachesHeaderRow.getCell(2).alignment = headerAlignment
+      coachesHeaderRow.getCell(3).font = headerFont
+      coachesHeaderRow.getCell(3).fill = headerFill
+      coachesHeaderRow.getCell(3).alignment = headerAlignment
+      coachesHeaderRow.getCell(4).font = headerFont
+      coachesHeaderRow.getCell(4).fill = headerFill
+      coachesHeaderRow.getCell(4).alignment = headerAlignment
+
+      // Coach data rows
+      if (reportData.coaches && reportData.coaches.length > 0) {
+        reportData.coaches.forEach((coach: any, index: number) => {
+          const teamIds = coach.teams.join(', ')
+          const coachRow = worksheet.addRow([index + 1, coach.coachId, coach.fullName, teamIds])
+          coachRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' }
+          coachRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' }
+          coachRow.getCell(3).alignment = { horizontal: 'center', vertical: 'middle' }
+          coachRow.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' }
+        })
+      }
+
       // Set column widths to fit content properly
       worksheet.columns = [
-        { width: 5 }, // №
-        { width: 15 }, // Team ID / Member ID
-        { width: 25 }, // Robot name / Member Name
-        { width: 30 }, // Member ID / Team ID (wider to show multiple IDs)
+        { width: 5 }, // № / Part of merged Total Coach (A:B)
+        { width: 15 }, // Team ID / Part of merged Total Coach (A:B)
+        { width: 25 }, // Robot name / Member Name / Coach Name / Total Member
+        { width: 30 }, // Member ID / Team ID / Total Team
       ]
 
       // Generate Excel file

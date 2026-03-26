@@ -312,6 +312,10 @@ export const exportOrganisationReport = async (req, res) => {
             .populate({
                 path: "contestantIds",
                 select: "_id contestantId ner ovog email phoneNumber"
+            })
+            .populate({
+                path: "coachId",
+                select: "_id coachId ner ovog email phoneNumber"
             });
 
         // Filter teams with approved payments
@@ -319,8 +323,9 @@ export const exportOrganisationReport = async (req, res) => {
             team.paymentId && team.paymentId.status === "approved"
         );
 
-        // Collect unique members (contestants) from approved teams
+        // Collect unique members (contestants) and coaches from approved teams
         const membersMap = new Map();
+        const coachesMap = new Map();
         const teamsList = [];
 
         approvedTeams.forEach(team => {
@@ -332,7 +337,8 @@ export const exportOrganisationReport = async (req, res) => {
                 teamId: team.teamId,
                 robotName: team.robotName,
                 memberIds: memberIds,
-                contestants: team.contestantIds
+                contestants: team.contestantIds,
+                coachId: team.coachId
             });
 
             // Add members to map
@@ -349,9 +355,24 @@ export const exportOrganisationReport = async (req, res) => {
                     });
                 }
             });
+
+            // Add coaches to map
+            if (team.coachId && team.coachId.coachId) {
+                if (!coachesMap.has(team.coachId.coachId)) {
+                    coachesMap.set(team.coachId.coachId, {
+                        coachId: team.coachId.coachId,
+                        ner: team.coachId.ner,
+                        ovog: team.coachId.ovog,
+                        fullName: `${team.coachId.ner} ${team.coachId.ovog}`.trim(),
+                        email: team.coachId.email,
+                        phoneNumber: team.coachId.phoneNumber,
+                        teams: []
+                    });
+                }
+            }
         });
 
-        // Map members to their teams
+        // Map members and coaches to their teams
         teamsList.forEach(team => {
             team.contestants.forEach(contestant => {
                 const memberData = membersMap.get(contestant.contestantId);
@@ -359,6 +380,14 @@ export const exportOrganisationReport = async (req, res) => {
                     memberData.teams.push(team.teamId);
                 }
             });
+
+            // Map coach to team
+            if (team.coachId && team.coachId.coachId) {
+                const coachData = coachesMap.get(team.coachId.coachId);
+                if (coachData && !coachData.teams.includes(team.teamId)) {
+                    coachData.teams.push(team.teamId);
+                }
+            }
         });
 
         // Prepare response with structured data
@@ -378,7 +407,8 @@ export const exportOrganisationReport = async (req, res) => {
                 totalTeams: teamsList.length,
             },
             teams: teamsList,
-            members: Array.from(membersMap.values())
+            members: Array.from(membersMap.values()),
+            coaches: Array.from(coachesMap.values())
         });
     } catch (error) {
         console.error("Error exporting organisation report:", error.message);
