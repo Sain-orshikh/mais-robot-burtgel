@@ -16,7 +16,7 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const { login } = useAuth()
   const { toast } = useToast()
-  const { settings } = usePublicSettings()
+  const { settings, loading: settingsLoading } = usePublicSettings()
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
@@ -61,11 +61,15 @@ export default function LoginPage() {
         <Card className='w-full max-w-md'>
         <CardHeader className='space-y-4 pb-4'>
           <div className='flex justify-center'>
-            <img 
-              src={settings.loginLogoUrl || '/icons/12.jpg'} 
-              alt='Logo'
-              className='w-32 h-32 object-contain rounded-lg'
-            />
+            {settingsLoading ? (
+              <div className='w-32 h-32 rounded-lg bg-muted animate-pulse' aria-label='Loading logo' />
+            ) : (
+              <img
+                src={settings.loginLogoUrl || '/icons/12.jpg'}
+                alt='Logo'
+                className='w-32 h-32 object-contain rounded-lg'
+              />
+            )}
           </div>
           <h1 className='text-2xl font-bold text-center'>User Login</h1>
         </CardHeader>

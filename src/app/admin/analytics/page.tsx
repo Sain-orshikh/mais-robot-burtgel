@@ -44,6 +44,19 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true)
   const [analytics, setAnalytics] = useState<AnalyticsResponse | null>(null)
 
+  const categoryStats = analytics?.categoryStats ?? {}
+  const registrationsByDate = analytics?.registrationsByDate ?? {}
+
+  const allCategories = useMemo(
+    () => Object.keys(categoryStats).sort((a, b) => (categoryStats[b] || 0) - (categoryStats[a] || 0)),
+    [categoryStats]
+  )
+
+  const sortedDates = useMemo(
+    () => Object.entries(registrationsByDate).sort(([a], [b]) => new Date(a).getTime() - new Date(b).getTime()),
+    [registrationsByDate]
+  )
+
   useEffect(() => {
     if (isAuthenticated) {
       void fetchAnalytics()
@@ -94,14 +107,7 @@ export default function AnalyticsPage() {
     )
   }
 
-  const { stats, totals, categoryStats, schoolStats, registrationsByDate } = analytics
-
-  const allCategories = useMemo(
-    () => Object.keys(categoryStats).sort((a, b) => (categoryStats[b] || 0) - (categoryStats[a] || 0)),
-    [categoryStats]
-  )
-
-  const sortedDates = Object.entries(registrationsByDate).sort(([a], [b]) => new Date(a).getTime() - new Date(b).getTime())
+  const { stats, totals, schoolStats } = analytics
 
   // Top categories
   const topCategories = Object.entries(categoryStats)

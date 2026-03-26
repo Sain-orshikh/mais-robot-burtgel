@@ -65,13 +65,15 @@ export const getAdminSettings = async (_req, res) => {
 
 export const updateAdminSettings = async (req, res) => {
     try {
+        const payload = req.body && typeof req.body === "object" ? req.body : {};
+
         const {
             bankName,
             bankAccountName,
             bankAccountNumber,
             loginLogoUrl,
             availableCategories,
-        } = req.body;
+        } = payload;
 
         const updates = {};
 
@@ -116,11 +118,16 @@ export const updateAdminSettings = async (req, res) => {
             updates.availableCategories = normalized;
         }
 
-        const settings = await SystemSettings.findOneAndUpdate(
-            { singleton: "global" },
-            { $set: updates, $setOnInsert: { singleton: "global", ...mapFromEnv() } },
-            { new: true, upsert: true }
-        );
+        let settings;
+
+        if (Object.keys(updates).length === 0) {
+            // No-op update should not fail; return current settings.
+            settings = await getOrCreateSettings();
+        } else {
+            settings = await getOrCreateSettings();
+            Object.assign(settings, updates);
+            await settings.save();
+        }
 
         res.status(200).json(settings);
     } catch (error) {

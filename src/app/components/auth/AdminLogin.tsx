@@ -14,7 +14,7 @@ export const AdminLogin = () => {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const { settings } = usePublicSettings()
+  const { settings, loading: settingsLoading } = usePublicSettings()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -52,11 +52,15 @@ export const AdminLogin = () => {
         <div className='md:min-w-[450px] min-w-max'>
           <CardBox>
             <div className='flex justify-center mb-4'>
-              <img
-                src={settings.loginLogoUrl || '/icons/12.jpg'}
-                alt='MAIS logo'
-                className='w-28 h-28 object-contain rounded-lg'
-              />
+              {settingsLoading ? (
+                <div className='w-28 h-28 rounded-lg bg-muted animate-pulse' aria-label='Loading logo' />
+              ) : (
+                <img
+                  src={settings.loginLogoUrl || '/icons/12.jpg'}
+                  alt='MAIS logo'
+                  className='w-28 h-28 object-contain rounded-lg'
+                />
+              )}
             </div>
             <h2 className='text-2xl font-bold text-center mb-2'>
               Админ Удирдлагын Систем
