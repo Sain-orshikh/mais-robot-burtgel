@@ -222,9 +222,9 @@ export default function CoachLibraryPage() {
       </div>
 
       {/* Header */}
-      <div className='flex justify-between items-center mb-6'>
+      <div className='flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6'>
         <h1 className='text-2xl font-bold text-gray-800'>Coach Library</h1>
-        <Button className='bg-blue-500 hover:bg-blue-600' onClick={openAddModal}>
+        <Button className='bg-blue-500 hover:bg-blue-600 w-full sm:w-auto' onClick={openAddModal}>
           <Plus size={18} className='mr-2' />
           Add
         </Button>
@@ -233,8 +233,8 @@ export default function CoachLibraryPage() {
       {/* Table Card */}
       <div className='bg-white rounded-lg shadow'>
         {/* Controls */}
-        <div className='p-4 border-b flex justify-between items-center'>
-          <div className='flex items-center gap-2'>
+        <div className='p-4 border-b flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center'>
+          <div className='flex items-center gap-2 flex-wrap'>
             <span className='text-sm text-gray-600'>Show</span>
             <Select value={entriesPerPage} onValueChange={setEntriesPerPage}>
               <SelectTrigger className='w-20'>
@@ -250,13 +250,13 @@ export default function CoachLibraryPage() {
             <span className='text-sm text-gray-600'>entries</span>
           </div>
 
-          <div className='flex items-center gap-2'>
+          <div className='flex items-center gap-2 w-full sm:w-auto'>
             <Search size={16} className='text-gray-400' />
             <Input
               placeholder='Search...'
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className='w-64'
+              className='w-full sm:w-64'
             />
           </div>
         </div>

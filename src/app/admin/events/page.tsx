@@ -419,17 +419,17 @@ export default function AdminEventsPage() {
 
   return (
     <div className='min-h-screen bg-gray-50'>
-      <div className='container mx-auto px-6 py-8'>
-        <div className='flex justify-between items-center mb-6'>
+      <div className='container mx-auto px-4 sm:px-6 py-8'>
+        <div className='flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6'>
           <div>
             <h1 className='text-2xl font-bold text-gray-800'>Event Management</h1>
             <p className='text-sm text-gray-600 mt-1'>Create and manage competition events</p>
           </div>
-          <div className='flex items-center gap-2'>
-            <Button variant='outline' onClick={() => navigate('/admin/settings')}>
+          <div className='grid grid-cols-1 sm:grid-cols-2 gap-2 w-full sm:w-auto'>
+            <Button variant='outline' onClick={() => navigate('/admin/settings')} className='w-full sm:w-auto'>
               Manage Categories
             </Button>
-            <Button className='bg-blue-500 hover:bg-blue-600' onClick={openAddModal}>
+            <Button className='bg-blue-500 hover:bg-blue-600 w-full sm:w-auto' onClick={openAddModal}>
               <Plus size={18} className='mr-2' />
               Add Event
             </Button>
@@ -523,7 +523,7 @@ export default function AdminEventsPage() {
 
         {/* Add/Edit Event Modal */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className='max-w-3xl max-h-[90vh] overflow-y-auto'>
+          <DialogContent className='w-[calc(100vw-1rem)] sm:w-full sm:max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6'>
             <DialogHeader>
               <DialogTitle className='flex items-center gap-2'>
                 <Calendar className='h-5 w-5' />
@@ -597,7 +597,7 @@ export default function AdminEventsPage() {
               <div className='grid gap-4 p-4 border rounded-lg bg-gray-50'>
                 <h3 className='font-semibold text-sm'>Registration Period (Ulaanbaatar Time GMT+8)</h3>
                 
-                <div className='grid grid-cols-2 gap-4'>
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
                   <div className='grid gap-2'>
                     <Label htmlFor='registrationStartDate'>
                       Start Date <span className='text-red-500'>*</span>
@@ -611,7 +611,7 @@ export default function AdminEventsPage() {
                   </div>
                   <div className='grid gap-2'>
                     <Label htmlFor='registrationStartTime'>Time</Label>
-                    <div className='flex gap-2'>
+                    <div className='flex flex-col sm:flex-row gap-2'>
                       <Input
                         id='registrationStartTime'
                         type='time'
@@ -632,7 +632,7 @@ export default function AdminEventsPage() {
                   </div>
                 </div>
 
-                <div className='grid grid-cols-2 gap-4'>
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
                   <div className='grid gap-2'>
                     <Label htmlFor='registrationEndDate'>
                       End Date <span className='text-red-500'>*</span>
@@ -646,7 +646,7 @@ export default function AdminEventsPage() {
                   </div>
                   <div className='grid gap-2'>
                     <Label htmlFor='registrationEndTime'>Time</Label>
-                    <div className='flex gap-2'>
+                    <div className='flex flex-col sm:flex-row gap-2'>
                       <Input
                         id='registrationEndTime'
                         type='time'
@@ -672,7 +672,7 @@ export default function AdminEventsPage() {
               <div className='grid gap-4 p-4 border rounded-lg bg-gray-50'>
                 <h3 className='font-semibold text-sm'>Event Dates (Local Time)</h3>
                 
-                <div className='grid grid-cols-2 gap-4'>
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
                   <div className='grid gap-2'>
                     <Label htmlFor='startDate'>
                       Start Date <span className='text-red-500'>*</span>
@@ -686,7 +686,7 @@ export default function AdminEventsPage() {
                   </div>
                   <div className='grid gap-2'>
                     <Label htmlFor='startTime'>Time</Label>
-                    <div className='flex gap-2'>
+                    <div className='flex flex-col sm:flex-row gap-2'>
                       <Input
                         id='startTime'
                         type='time'
@@ -707,7 +707,7 @@ export default function AdminEventsPage() {
                   </div>
                 </div>
 
-                <div className='grid grid-cols-2 gap-4'>
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
                   <div className='grid gap-2'>
                     <Label htmlFor='endDate'>
                       End Date <span className='text-red-500'>*</span>
@@ -721,7 +721,7 @@ export default function AdminEventsPage() {
                   </div>
                   <div className='grid gap-2'>
                     <Label htmlFor='endTime'>Time</Label>
-                    <div className='flex gap-2'>
+                    <div className='flex flex-col sm:flex-row gap-2'>
                       <Input
                         id='endTime'
                         type='time'
@@ -748,7 +748,7 @@ export default function AdminEventsPage() {
                   <Label>
                     Competition Categories <span className='text-red-500'>*</span>
                   </Label>
-                  <div className='flex gap-2'>
+                  <div className='flex flex-wrap gap-2'>
                     <Button
                       type='button'
                       variant='outline'
@@ -774,7 +774,7 @@ export default function AdminEventsPage() {
                   </div>
                 </div>
                 <p className='text-sm text-gray-600 mb-2'>Select categories available for this event</p>
-                <div className='grid grid-cols-2 gap-3 border rounded-lg p-4 max-h-60 overflow-y-auto'>
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-3 border rounded-lg p-4 max-h-60 overflow-y-auto'>
                   {availableCategories.map((category) => (
                     <div key={category.categoryCode} className='flex items-start space-x-2'>
                       <Checkbox
