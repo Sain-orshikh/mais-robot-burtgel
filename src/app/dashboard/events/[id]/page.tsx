@@ -11,10 +11,11 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowLeft, Users, Trophy, Calendar, MapPin, CreditCard, CheckCircle2, XCircle, Clock, AlertCircle, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Users, Trophy, Calendar, MapPin, CreditCard, CheckCircle2, XCircle, Clock, AlertCircle, RefreshCw, Download } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/hooks/useAuth'
 import { PaymentModal } from '@/app/components/events/PaymentModal'
+import { OrganisationReportModal } from '@/app/components/dashboard/OrganisationReportModal'
 import {
   Select,
   SelectContent,
@@ -50,6 +51,9 @@ export default function EventDetailPage() {
   
   // Payment state
   const [showPaymentModal, setShowPaymentModal] = useState(false)
+
+  // Report download state
+  const [showReportModal, setShowReportModal] = useState(false)
 
   const eventCategories = event?.categories.map((cat: any) => ({
     code: cat.categoryCode || cat.name,
@@ -373,7 +377,7 @@ export default function EventDetailPage() {
       
       {/* Team Registration Form */}
       {isRegistrationOpen && !showTeamForm && (
-        <div className='mb-8'>
+        <div className='mb-8 flex gap-3'>
           <Button
             onClick={() => setShowTeamForm(true)}
             className='bg-blue-600 hover:bg-blue-700'
@@ -381,6 +385,15 @@ export default function EventDetailPage() {
             <Users className='mr-2 h-4 w-4' />
             Register New Team
           </Button>
+          {myTeams.filter(t => t.status === 'active').length > 0 && payments.some(p => p.status === 'approved') && (
+            <Button
+              onClick={() => setShowReportModal(true)}
+              className='bg-indigo-600 hover:bg-indigo-700'
+            >
+              <Download className='mr-2 h-4 w-4' />
+              Download Teams CSV
+            </Button>
+          )}
         </div>
       )}
 
@@ -843,6 +856,11 @@ export default function EventDetailPage() {
           onPaymentSubmit={handlePaymentSubmit}
         />
       )}
+
+      <OrganisationReportModal
+        open={showReportModal}
+        onOpenChange={setShowReportModal}
+      />
     </div>
   )
 }

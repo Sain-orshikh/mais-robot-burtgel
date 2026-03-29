@@ -268,3 +268,130 @@ export const exportAnalytics = async (req, res) => {
         res.status(500).json({ error: "Failed to export analytics" });
     }
 };
+
+// Export organisation report with teams and members (approved payments only)
+export const exportOrganisationReport = async (req, res) => {
+    try {
+        const { organisationId, eventId } = req.query;
+
+        if (!organisationId) {
+            return res.status(400).json({ error: "organisationId is required" });
+        }
+
+        if (!eventId) {
+            return res.status(400).json({ error: "eventId is required" });
+        }
+
+        const organisation = await Organisation.findById(organisationId);
+        if (!organisation) {
+            return res.status(404).json({ error: "Organisation not found" });
+        }
+
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ error: "Event not found" });
+        }
+
+        const teams = await Team.find({
+            organisationId,
+            eventId,
+            status: "active",
+        })
+            .populate({ path: "paymentId", select: "_id status" })
+            .populate({
+                path: "contestantIds",
+                select: "_id contestantId ner ovog email phoneNumber",
+            })
+            .populate({
+                path: "coachId",
+                select: "_id coachId ner ovog email phoneNumber",
+            });
+
+        const approvedTeams = teams.filter(
+            (team) => team.paymentId && team.paymentId.status === "approved"
+        );
+
+        const membersMap = new Map();
+        const coachesMap = new Map();
+        const teamsList = [];
+
+        approvedTeams.forEach((team) => {
+            const memberIds = team.contestantIds
+                .map((member) => member.contestantId)
+                .join(", ");
+
+            teamsList.push({
+                teamId: team.teamId,
+                robotName: team.robotName,
+                memberIds,
+                contestants: team.contestantIds,
+                coachId: team.coachId,
+            });
+
+            team.contestantIds.forEach((contestant) => {
+                if (contestant.contestantId && !membersMap.has(contestant.contestantId)) {
+                    membersMap.set(contestant.contestantId, {
+                        contestantId: contestant.contestantId,
+                        ner: contestant.ner,
+                        ovog: contestant.ovog,
+                        fullName: `${contestant.ner} ${contestant.ovog}`.trim(),
+                        email: contestant.email,
+                        phoneNumber: contestant.phoneNumber,
+                        teams: [],
+                    });
+                }
+            });
+
+            if (team.coachId && team.coachId.coachId && !coachesMap.has(team.coachId.coachId)) {
+                coachesMap.set(team.coachId.coachId, {
+                    coachId: team.coachId.coachId,
+                    ner: team.coachId.ner,
+                    ovog: team.coachId.ovog,
+                    fullName: `${team.coachId.ner} ${team.coachId.ovog}`.trim(),
+                    email: team.coachId.email,
+                    phoneNumber: team.coachId.phoneNumber,
+                    teams: [],
+                });
+            }
+        });
+
+        teamsList.forEach((team) => {
+            team.contestants.forEach((contestant) => {
+                const memberData = membersMap.get(contestant.contestantId);
+                if (memberData && !memberData.teams.includes(team.teamId)) {
+                    memberData.teams.push(team.teamId);
+                }
+            });
+
+            if (team.coachId && team.coachId.coachId) {
+                const coachData = coachesMap.get(team.coachId.coachId);
+                if (coachData && !coachData.teams.includes(team.teamId)) {
+                    coachData.teams.push(team.teamId);
+                }
+            }
+        });
+
+        res.json({
+            event: {
+                name: event.name || "MAIS Robot Challenge",
+                code: event.eventCode || "EVENT",
+            },
+            organisation: {
+                id: organisation.organisationId,
+                name: organisation.typeDetail,
+                type: organisation.type,
+                aimag: organisation.aimag,
+            },
+            summary: {
+                totalMembers: membersMap.size,
+                totalTeams: teamsList.length,
+            },
+            teams: teamsList,
+            members: Array.from(membersMap.values()),
+            coaches: Array.from(coachesMap.values()),
+        });
+    } catch (error) {
+        console.error("Error exporting organisation report:", error.message);
+        res.status(500).json({ error: "Failed to export organisation report" });
+    }
+};
