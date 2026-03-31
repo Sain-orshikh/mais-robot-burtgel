@@ -363,6 +363,7 @@ export default function RegistrationsPage() {
         onOpenChange={setCSVExportModalOpen}
         registrations={filteredRegistrations}
         eventId={selectedEventId}
+        events={events}
       />
     </div>
   )

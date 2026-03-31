@@ -25,6 +25,7 @@ interface CSVExportModalProps {
   onOpenChange: (open: boolean) => void
   registrations: any[]
   eventId: string
+  events: Array<{ _id: string; name: string }>
 }
 
 type ExportType = 'teams' | 'contestants' | 'coaches' | 'organisations' | null
@@ -90,7 +91,7 @@ const EXPORT_OPTIONS = [
   { id: 'organisations', label: 'All Organisations', icon: Building2, description: 'Organization information' },
 ]
 
-export function CSVExportModal({ open, onOpenChange, registrations, eventId }: CSVExportModalProps) {
+export function CSVExportModal({ open, onOpenChange, registrations, eventId, events }: CSVExportModalProps) {
   const { toast } = useToast()
   const [exportType, setExportType] = useState<ExportType>(null)
   const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set())
@@ -101,6 +102,16 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
   const [isLoadingData, setIsLoadingData] = useState(false)
   const [selectedTeamCategory, setSelectedTeamCategory] = useState<string>('all')
   const [teamCategories, setTeamCategories] = useState<string[]>([])
+  const [selectedExportEventId, setSelectedExportEventId] = useState<string>('all')
+
+  useEffect(() => {
+    if (!open) return
+    if (eventId) {
+      setSelectedExportEventId(eventId)
+      return
+    }
+    setSelectedExportEventId('all')
+  }, [open, eventId])
 
   // Fetch data from APIs based on export type
   useEffect(() => {
@@ -116,10 +127,17 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
               : 'https://mais-robot-burtgel.onrender.com')
           : 'http://localhost:5000'
         
+        const query = new URLSearchParams()
+        if (selectedExportEventId !== 'all') {
+          query.set('eventId', selectedExportEventId)
+        }
+        const queryString = query.toString()
+        const endpointSuffix = queryString ? `?${queryString}` : ''
+
         switch (exportType) {
           case 'teams':
-            if (allTeams.length === 0) {
-              const res = await fetch(`${apiUrl}/api/export/teams`, {
+            {
+              const res = await fetch(`${apiUrl}/api/export/teams${endpointSuffix}`, {
                 credentials: 'include',
                 headers: {
                   'Content-Type': 'application/json',
@@ -137,8 +155,8 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
             }
             break
           case 'contestants':
-            if (allContestants.length === 0) {
-              const res = await fetch(`${apiUrl}/api/export/contestants`, {
+            {
+              const res = await fetch(`${apiUrl}/api/export/contestants${endpointSuffix}`, {
                 credentials: 'include',
                 headers: {
                   'Content-Type': 'application/json',
@@ -151,8 +169,8 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
             }
             break
           case 'coaches':
-            if (allCoaches.length === 0) {
-              const res = await fetch(`${apiUrl}/api/export/coaches`, {
+            {
+              const res = await fetch(`${apiUrl}/api/export/coaches${endpointSuffix}`, {
                 credentials: 'include',
                 headers: {
                   'Content-Type': 'application/json',
@@ -165,8 +183,8 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
             }
             break
           case 'organisations':
-            if (allOrganisations.length === 0) {
-              const res = await fetch(`${apiUrl}/api/export/organisations`, {
+            {
+              const res = await fetch(`${apiUrl}/api/export/organisations${endpointSuffix}`, {
                 credentials: 'include',
                 headers: {
                   'Content-Type': 'application/json',
@@ -192,7 +210,7 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
     }
 
     fetchDataForExportType()
-  }, [open, exportType, allTeams.length, allContestants.length, allCoaches.length, allOrganisations.length, toast])
+  }, [open, exportType, selectedExportEventId, toast])
 
   const getFieldsForType = (type: ExportType) => {
     switch (type) {
@@ -214,6 +232,11 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
     const fields = getFieldsForType(type)
     setSelectedFields(new Set(fields.slice(0, Math.ceil(fields.length / 2)).map(f => f.id)))
     setSelectedTeamCategory('all')
+    setAllTeams([])
+    setAllContestants([])
+    setAllCoaches([])
+    setAllOrganisations([])
+    setTeamCategories([])
   }
 
   const handleSelectAll = () => {
@@ -505,7 +528,8 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
     const link = document.createElement('a')
     const url = URL.createObjectURL(blob)
     link.setAttribute('href', url)
-    link.setAttribute('download', `${exportType}_${eventId}_${Date.now()}.csv`)
+    const scopeLabel = selectedExportEventId === 'all' ? 'all-events' : selectedExportEventId
+    link.setAttribute('download', `${exportType}_${scopeLabel}_${Date.now()}.csv`)
     link.style.visibility = 'hidden'
     document.body.appendChild(link)
     link.click()
@@ -564,6 +588,36 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId }: C
             </DialogHeader>
 
             <div className='space-y-4'>
+              <div>
+                <Label htmlFor='exportEventScope' className='text-sm font-medium mb-2 block'>
+                  Event scope
+                </Label>
+                <Select
+                  value={selectedExportEventId}
+                  onValueChange={(value) => {
+                    setSelectedExportEventId(value)
+                    setSelectedTeamCategory('all')
+                    setAllTeams([])
+                    setAllContestants([])
+                    setAllCoaches([])
+                    setAllOrganisations([])
+                    setTeamCategories([])
+                  }}
+                >
+                  <SelectTrigger id='exportEventScope' className='w-full'>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='all'>All events</SelectItem>
+                    {events.map((event) => (
+                      <SelectItem key={event._id} value={event._id}>
+                        {event.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               {exportType === 'teams' && teamCategories.length > 0 && (
                 <div>
                   <Label htmlFor='teamCategory' className='text-sm font-medium mb-2 block'>
