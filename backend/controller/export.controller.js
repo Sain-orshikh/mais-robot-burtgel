@@ -8,8 +8,14 @@ import Event from "../models/event.model.js";
 // Export all teams with payment approved status
 export const exportTeams = async (req, res) => {
     try {
+        const { eventId } = req.query;
+        const teamQuery = { status: "active" };
+        if (eventId) {
+            teamQuery.eventId = eventId;
+        }
+
         // Fetch all teams with populated relations
-        const teams = await Team.find()
+        const teams = await Team.find(teamQuery)
             .populate({
                 path: "organisationId",
                 select: "_id typeDetail name type aimag email phoneNumber registriinDugaar ner ovog"
@@ -58,18 +64,43 @@ export const exportTeams = async (req, res) => {
 // Export all contestants with team and organisation info
 export const exportContestants = async (req, res) => {
     try {
-        const contestants = await Contestant.find()
+        const { eventId } = req.query;
+        const teamQuery = { status: "active" };
+        if (eventId) {
+            teamQuery.eventId = eventId;
+        }
+
+        const teams = await Team.find(teamQuery)
+            .populate({ path: "paymentId", select: "_id status" })
+            .select("_id teamId contestantIds");
+
+        const approvedTeams = teams.filter(
+            (team) => team.paymentId && team.paymentId.status === "approved"
+        );
+
+        const contestantIds = Array.from(
+            new Set(
+                approvedTeams.flatMap((team) =>
+                    Array.isArray(team.contestantIds)
+                        ? team.contestantIds.map((id) => id.toString())
+                        : []
+                )
+            )
+        );
+
+        if (contestantIds.length === 0) {
+            return res.json([]);
+        }
+
+        const contestants = await Contestant.find({ _id: { $in: contestantIds } })
             .populate({
                 path: "organisationId",
                 select: "_id typeDetail"
             });
 
-        // Fetch all teams to find which teams have these contestants
-        const teams = await Team.find().select("_id teamId contestantIds");
-
         // Enrich contestants with team IDs
         const enrichedContestants = contestants.map(contestant => {
-            const contestantTeams = teams.filter(team => 
+            const contestantTeams = approvedTeams.filter(team => 
                 team.contestantIds.some(cId => cId.toString() === contestant._id.toString())
             );
             const teamIds = contestantTeams.map(t => t.teamId).join(', ');
@@ -86,7 +117,7 @@ export const exportContestants = async (req, res) => {
                 tursunUdur: contestant.tursunUdur,
                 organisationName: contestant.organisationId?.typeDetail || '',
                 teamIds: teamIds,
-                participationCount: (contestant.participations && Array.isArray(contestant.participations)) ? contestant.participations.length : 0,
+                participationCount: contestantTeams.length,
             };
         });
 
@@ -100,18 +131,43 @@ export const exportContestants = async (req, res) => {
 // Export all coaches with team info
 export const exportCoaches = async (req, res) => {
     try {
-        const coaches = await Coach.find()
+        const { eventId } = req.query;
+        const teamQuery = { status: "active" };
+        if (eventId) {
+            teamQuery.eventId = eventId;
+        }
+
+        const teams = await Team.find(teamQuery)
+            .populate({ path: "paymentId", select: "_id status" })
+            .select("_id teamId coachId");
+
+        const approvedTeams = teams.filter(
+            (team) => team.paymentId && team.paymentId.status === "approved"
+        );
+
+        const coachIds = Array.from(
+            new Set(
+                approvedTeams
+                    .map((team) => team.coachId?.toString())
+                    .filter(Boolean)
+            )
+        );
+
+        if (coachIds.length === 0) {
+            return res.json([]);
+        }
+
+        const coaches = await Coach.find({ _id: { $in: coachIds } })
             .populate({
                 path: "organisationId",
                 select: "_id typeDetail"
             });
 
-        // Fetch all teams to find which teams have these coaches
-        const teams = await Team.find().select("_id teamId coachId");
-
         // Enrich coaches with team IDs
         const enrichedCoaches = coaches.map(coach => {
-            const coachTeams = teams.filter(team => team.coachId.toString() === coach._id.toString());
+            const coachTeams = approvedTeams.filter(
+                (team) => team.coachId && team.coachId.toString() === coach._id.toString()
+            );
             const teamIds = coachTeams.map(t => t.teamId).join(', ');
 
             return {
@@ -126,7 +182,7 @@ export const exportCoaches = async (req, res) => {
                 tursunUdur: coach.tursunUdur,
                 organisationName: coach.organisationId?.typeDetail || '',
                 teamIds: teamIds,
-                participationCount: (coach.participations && Array.isArray(coach.participations)) ? coach.participations.length : 0,
+                participationCount: coachTeams.length,
             };
         });
 
@@ -140,12 +196,45 @@ export const exportCoaches = async (req, res) => {
 // Export all organisations with team counts
 export const exportOrganisations = async (req, res) => {
     try {
-        const organisations = await Organisation.find();
+        const { eventId } = req.query;
+        const teamQuery = { status: "active" };
+        if (eventId) {
+            teamQuery.eventId = eventId;
+        }
+
+        const teams = await Team.find(teamQuery)
+            .populate({ path: "paymentId", select: "_id status" })
+            .select("_id organisationId");
+
+        const approvedTeams = teams.filter(
+            (team) => team.paymentId && team.paymentId.status === "approved"
+        );
+
+        const organisationIds = Array.from(
+            new Set(
+                approvedTeams
+                    .map((team) => team.organisationId?.toString())
+                    .filter(Boolean)
+            )
+        );
+
+        if (organisationIds.length === 0) {
+            return res.json([]);
+        }
+
+        const organisations = await Organisation.find({ _id: { $in: organisationIds } });
+
+        const teamCountByOrganisation = approvedTeams.reduce((acc, team) => {
+            const orgId = team.organisationId?.toString();
+            if (!orgId) return acc;
+            acc[orgId] = (acc[orgId] || 0) + 1;
+            return acc;
+        }, {});
 
         // Enrich with team counts
         const enrichedOrgs = await Promise.all(
             organisations.map(async (org) => {
-                const teamCount = await Team.countDocuments({ organisationId: org._id });
+                const teamCount = teamCountByOrganisation[org._id.toString()] || 0;
                 const safeOrganisationId = org.organisationId || org._id?.toString() || "";
 
                 return {
@@ -269,7 +358,7 @@ export const exportAnalytics = async (req, res) => {
     }
 };
 
-// Export organisation report with teams and members (with approved payments)
+// Export organisation report with teams and members (approved payments only)
 export const exportOrganisationReport = async (req, res) => {
     try {
         const { organisationId, eventId } = req.query;
@@ -282,67 +371,53 @@ export const exportOrganisationReport = async (req, res) => {
             return res.status(400).json({ error: "eventId is required" });
         }
 
-        // Fetch organisation details
         const organisation = await Organisation.findById(organisationId);
         if (!organisation) {
             return res.status(404).json({ error: "Organisation not found" });
         }
 
-        // Fetch event details
         const event = await Event.findById(eventId);
-        let eventName = "MonRobot Challenge 2026";
-        let eventCode = "MN2026";
-        if (event) {
-            eventName = event.name || eventName;
-            eventCode = event.eventCode || eventCode;
-        } else {
+        if (!event) {
             return res.status(404).json({ error: "Event not found" });
         }
 
-        // Fetch teams for this organisation AND event with approved payments
         const teams = await Team.find({
-            organisationId: organisationId,
-            eventId: eventId,
-            status: "active"
+            organisationId,
+            eventId,
+            status: "active",
         })
-            .populate({
-                path: "paymentId",
-                select: "_id status"
-            })
+            .populate({ path: "paymentId", select: "_id status" })
             .populate({
                 path: "contestantIds",
-                select: "_id contestantId ner ovog email phoneNumber"
+                select: "_id contestantId ner ovog email phoneNumber",
             })
             .populate({
                 path: "coachId",
-                select: "_id coachId ner ovog email phoneNumber"
+                select: "_id coachId ner ovog email phoneNumber",
             });
 
-        // Filter teams with approved payments
-        const approvedTeams = teams.filter(team => 
-            team.paymentId && team.paymentId.status === "approved"
+        const approvedTeams = teams.filter(
+            (team) => team.paymentId && team.paymentId.status === "approved"
         );
 
-        // Collect unique members (contestants) and coaches from approved teams
         const membersMap = new Map();
         const coachesMap = new Map();
         const teamsList = [];
 
-        approvedTeams.forEach(team => {
+        approvedTeams.forEach((team) => {
             const memberIds = team.contestantIds
-                .map(member => member.contestantId)
+                .map((member) => member.contestantId)
                 .join(", ");
 
             teamsList.push({
                 teamId: team.teamId,
                 robotName: team.robotName,
-                memberIds: memberIds,
+                memberIds,
                 contestants: team.contestantIds,
-                coachId: team.coachId
+                coachId: team.coachId,
             });
 
-            // Add members to map
-            team.contestantIds.forEach(contestant => {
+            team.contestantIds.forEach((contestant) => {
                 if (contestant.contestantId && !membersMap.has(contestant.contestantId)) {
                     membersMap.set(contestant.contestantId, {
                         contestantId: contestant.contestantId,
@@ -351,37 +426,32 @@ export const exportOrganisationReport = async (req, res) => {
                         fullName: `${contestant.ner} ${contestant.ovog}`.trim(),
                         email: contestant.email,
                         phoneNumber: contestant.phoneNumber,
-                        teams: []
+                        teams: [],
                     });
                 }
             });
 
-            // Add coaches to map
-            if (team.coachId && team.coachId.coachId) {
-                if (!coachesMap.has(team.coachId.coachId)) {
-                    coachesMap.set(team.coachId.coachId, {
-                        coachId: team.coachId.coachId,
-                        ner: team.coachId.ner,
-                        ovog: team.coachId.ovog,
-                        fullName: `${team.coachId.ner} ${team.coachId.ovog}`.trim(),
-                        email: team.coachId.email,
-                        phoneNumber: team.coachId.phoneNumber,
-                        teams: []
-                    });
-                }
+            if (team.coachId && team.coachId.coachId && !coachesMap.has(team.coachId.coachId)) {
+                coachesMap.set(team.coachId.coachId, {
+                    coachId: team.coachId.coachId,
+                    ner: team.coachId.ner,
+                    ovog: team.coachId.ovog,
+                    fullName: `${team.coachId.ner} ${team.coachId.ovog}`.trim(),
+                    email: team.coachId.email,
+                    phoneNumber: team.coachId.phoneNumber,
+                    teams: [],
+                });
             }
         });
 
-        // Map members and coaches to their teams
-        teamsList.forEach(team => {
-            team.contestants.forEach(contestant => {
+        teamsList.forEach((team) => {
+            team.contestants.forEach((contestant) => {
                 const memberData = membersMap.get(contestant.contestantId);
                 if (memberData && !memberData.teams.includes(team.teamId)) {
                     memberData.teams.push(team.teamId);
                 }
             });
 
-            // Map coach to team
             if (team.coachId && team.coachId.coachId) {
                 const coachData = coachesMap.get(team.coachId.coachId);
                 if (coachData && !coachData.teams.includes(team.teamId)) {
@@ -390,11 +460,10 @@ export const exportOrganisationReport = async (req, res) => {
             }
         });
 
-        // Prepare response with structured data
         res.json({
             event: {
-                name: eventName,
-                code: eventCode,
+                name: event.name || "MAIS Robot Challenge",
+                code: event.eventCode || "EVENT",
             },
             organisation: {
                 id: organisation.organisationId,
@@ -408,7 +477,7 @@ export const exportOrganisationReport = async (req, res) => {
             },
             teams: teamsList,
             members: Array.from(membersMap.values()),
-            coaches: Array.from(coachesMap.values())
+            coaches: Array.from(coachesMap.values()),
         });
     } catch (error) {
         console.error("Error exporting organisation report:", error.message);

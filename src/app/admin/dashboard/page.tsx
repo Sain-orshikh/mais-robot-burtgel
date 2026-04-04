@@ -154,26 +154,26 @@ export default function AdminDashboard() {
       {/* Main Content */}
       <main className='container mx-auto px-6 py-8'>
         {/* Quick Actions */}
-        <div className='flex gap-4 mb-8'>
-          <Button asChild className='gap-2'>
+        <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-8'>
+          <Button asChild className='gap-2 w-full'>
             <Link to='/admin/events'>
               <Calendar size={20} />
               Тэмцээн удирдах
             </Link>
           </Button>
-          <Button asChild variant='outline' className='gap-2'>
+          <Button asChild variant='outline' className='gap-2 w-full'>
             <Link to='/admin/registrations'>
               <Users size={20} />
               Бүртгэлүүд харах
             </Link>
           </Button>
-          <Button asChild variant='outline' className='gap-2'>
+          <Button asChild variant='outline' className='gap-2 w-full'>
             <Link to='/admin/analytics'>
               <BarChart3 size={20} />
               Статистик
             </Link>
           </Button>
-          <Button asChild variant='outline' className='gap-2'>
+          <Button asChild variant='outline' className='gap-2 w-full'>
             <Link to='/admin/settings'>
               <Settings size={20} />
               Тохиргоо

@@ -245,8 +245,8 @@ export default function RegistrationsPage() {
     <div className='min-h-screen bg-background'>
       {/* Header */}
       <div className='container mx-auto px-4 py-4'>
-        <div className='flex items-center justify-between'>
-          <div className='flex items-center gap-4'>
+        <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
+          <div className='flex items-center gap-2 sm:gap-4 min-w-0'>
             <Link to='/admin/dashboard'>
               <Button variant='ghost' size='sm'>
                 <ArrowLeft size={20} className='mr-2' />
@@ -260,12 +260,13 @@ export default function RegistrationsPage() {
               </p>
             </div>
           </div>
-          <div className='flex items-center gap-2'>
+          <div className='grid grid-cols-1 sm:grid-cols-2 lg:flex items-stretch sm:items-center gap-2 w-full lg:w-auto'>
             <Button
               variant='outline'
               size='sm'
               onClick={fetchRegistrations}
               disabled={loading}
+              className='w-full sm:w-auto'
             >
               <RefreshCw size={16} className='mr-2' />
               Дахин ачаалах
@@ -275,6 +276,7 @@ export default function RegistrationsPage() {
               size='sm'
               onClick={exportToCSV}
               disabled={filteredRegistrations.length === 0}
+              className='w-full sm:w-auto'
             >
               <Download size={16} className='mr-2' />
               CSV экспорт
@@ -361,6 +363,7 @@ export default function RegistrationsPage() {
         onOpenChange={setCSVExportModalOpen}
         registrations={filteredRegistrations}
         eventId={selectedEventId}
+        events={events}
       />
     </div>
   )

@@ -1,6 +1,5 @@
 import { Menu, X, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import {
   DropdownMenu,
@@ -9,7 +8,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useNavigate } from 'react-router-dom'
-import { ThemeToggle } from '@/app/components/shared/ThemeToggle'
 
 interface DashboardHeaderProps {
   onToggleSidebar: () => void
@@ -50,8 +48,6 @@ export function DashboardHeader({ onToggleSidebar, isSidebarOpen }: DashboardHea
 
         {/* Right Section - User Info and Actions */}
         <div className='flex items-center space-x-4 ml-auto'>
-          <ThemeToggle />
-          
           <div className='text-right text-sm'>
             <div className='font-medium'>{organisation?.email}</div>
           </div>

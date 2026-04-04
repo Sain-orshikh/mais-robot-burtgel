@@ -51,7 +51,7 @@ export default function EventDetailPage() {
   
   // Payment state
   const [showPaymentModal, setShowPaymentModal] = useState(false)
-  
+
   // Report download state
   const [showReportModal, setShowReportModal] = useState(false)
 
@@ -265,6 +265,10 @@ export default function EventDetailPage() {
     return now >= regStart && now <= regEnd
   })()
 
+  const canDownloadOrganisationReport =
+    myTeams.some((t) => t.status === 'active') &&
+    payments.some((p) => p.status === 'approved')
+
   return (
     <div className='container mx-auto px-6 py-8'>
       <Button
@@ -375,17 +379,19 @@ export default function EventDetailPage() {
         </CardContent>
       </Card>
       
-      {/* Team Registration Form */}
-      {isRegistrationOpen && !showTeamForm && (
-        <div className='mb-8 flex gap-3'>
-          <Button
-            onClick={() => setShowTeamForm(true)}
-            className='bg-blue-600 hover:bg-blue-700'
-          >
-            <Users className='mr-2 h-4 w-4' />
-            Register New Team
-          </Button>
-          {myTeams.filter(t => t.status === 'active').length > 0 && payments.some(p => p.status === 'approved') && (
+      {/* Team registration stays time-gated; report download remains available after deadline */}
+      {(isRegistrationOpen && !showTeamForm) || canDownloadOrganisationReport ? (
+        <div className='mb-8 flex gap-3 flex-wrap'>
+          {isRegistrationOpen && !showTeamForm && (
+            <Button
+              onClick={() => setShowTeamForm(true)}
+              className='bg-blue-600 hover:bg-blue-700'
+            >
+              <Users className='mr-2 h-4 w-4' />
+              Register New Team
+            </Button>
+          )}
+          {canDownloadOrganisationReport && (
             <Button
               onClick={() => setShowReportModal(true)}
               className='bg-indigo-600 hover:bg-indigo-700'
@@ -395,7 +401,7 @@ export default function EventDetailPage() {
             </Button>
           )}
         </div>
-      )}
+      ) : null}
 
       {showTeamForm && (
         <Card className='mb-8'>
@@ -856,8 +862,7 @@ export default function EventDetailPage() {
           onPaymentSubmit={handlePaymentSubmit}
         />
       )}
-      
-      {/* Organization Report Download Modal */}
+
       <OrganisationReportModal
         open={showReportModal}
         onOpenChange={setShowReportModal}
