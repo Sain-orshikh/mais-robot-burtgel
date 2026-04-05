@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { Users, Users2, Building2, UserCheck } from 'lucide-react'
+import { generateOrganisationsExcelFile, generateGenericExcelFile } from '@/utils/excelExport'
 
 interface CSVExportModalProps {
   open: boolean
@@ -88,7 +89,7 @@ const EXPORT_OPTIONS = [
   { id: 'teams', label: 'All Teams', icon: Users, description: 'Teams with contestant & coach details' },
   { id: 'contestants', label: 'All Contestants', icon: Users2, description: 'Contestants with team & category info' },
   { id: 'coaches', label: 'All Coaches', icon: UserCheck, description: 'Coaches with their teams' },
-  { id: 'organisations', label: 'All Organisations', icon: Building2, description: 'Organization information' },
+  { id: 'organisations', label: 'All Organisations', icon: Building2, description: 'Organization information with individual sheets' },
 ]
 
 export function CSVExportModal({ open, onOpenChange, registrations, eventId, events }: CSVExportModalProps) {
@@ -192,7 +193,28 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId, eve
               })
               if (res.ok) {
                 const data = await res.json()
+                console.log('Organisations data received:', data)
+                if (data.length > 0) {
+                  console.log('First org structure:', {
+                    organisationId: data[0].organisationId,
+                    typeDetail: data[0].typeDetail,
+                    totalTeams: data[0].totalTeams,
+                    totalContestants: data[0].totalContestants,
+                    totalCoaches: data[0].totalCoaches,
+                    teams: data[0].teams,
+                    contestants: data[0].contestants,
+                    coaches: data[0].coaches
+                  })
+                }
                 setAllOrganisations(data)
+              } else {
+                const errorText = await res.text()
+                console.error('Failed to fetch organisations:', res.status, errorText)
+                toast({
+                  title: 'Алдаа',
+                  description: `Организацийг ачаалахад алдаа: ${res.status}`,
+                  variant: 'destructive',
+                })
               }
             }
             break
@@ -478,7 +500,46 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId, eve
     return exportData
   }
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    const scopeLabel = selectedExportEventId === 'all' ? 'all-events' : selectedExportEventId
+
+    // For organizations, we don't need field selection, just export
+    if (exportType === 'organisations') {
+      if (allOrganisations.length === 0) {
+        toast({
+          title: 'Мэдээлэл',
+          description: 'Экспорт хийх мэдээлэл олдсонгүй',
+          variant: 'default',
+        })
+        return
+      }
+
+      const eventName = selectedExportEventId === 'all' 
+        ? 'UB robot challenge 2026'
+        : events.find(e => e._id === selectedExportEventId)?.name || 'Unknown Event'
+
+      try {
+        await generateOrganisationsExcelFile(allOrganisations, scopeLabel, eventName)
+        
+        toast({
+          title: 'Амжилттай',
+          description: 'Организацийн Excel файл руу экспорт хийлээ',
+        })
+
+        onOpenChange(false)
+        setExportType(null)
+      } catch (error) {
+        console.error('Export error:', error)
+        toast({
+          title: 'Алдаа',
+          description: 'Экспорт хийхдээ алдаа гарлаа',
+          variant: 'destructive',
+        })
+      }
+      return
+    }
+
+    // For other types, require field selection
     if (selectedFields.size === 0) {
       toast({
         title: 'Анхаар',
@@ -500,45 +561,29 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId, eve
     }
 
     const fields = getFieldsForType(exportType)
-    const selectedFieldDefs = fields.filter(f => selectedFields.has(f.id))
-    const headers = selectedFieldDefs.map(f => f.label)
 
-    const rows = exportData.map(item => {
-      return selectedFieldDefs.map(field => {
-        const value = getValueByPath(item, field.key)
-        
-        if (Array.isArray(value)) {
-          return value.join('; ')
-        }
-        if (typeof value === 'object' && value !== null) {
-          return JSON.stringify(value)
-        }
-        return String(value || '')
+    try {
+      await generateGenericExcelFile(exportData, exportType || '', {
+        fields,
+        selectedFields,
+      }, scopeLabel)
+      
+      toast({
+        title: 'Амжилттай',
+        description: `${exportType} Excel файл руу экспорт хийлээ`,
       })
-    })
 
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(',')),
-    ].join('\n')
-
-    // Add UTF-8 BOM for proper encoding in Excel with Mongolian characters
-    const BOM = '\uFEFF'
-    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.setAttribute('href', url)
-    const scopeLabel = selectedExportEventId === 'all' ? 'all-events' : selectedExportEventId
-    link.setAttribute('download', `${exportType}_${scopeLabel}_${Date.now()}.csv`)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-
-    toast({
-      title: 'Амжилттай',
-      description: `${exportType} CSV файл руу экспорт хийлээ`,
-    })
+      onOpenChange(false)
+      setExportType(null)
+    } catch (error) {
+      console.error('Export error:', error)
+      toast({
+        title: 'Алдаа',
+        description: 'Экспорт хийхдээ алдаа гарлаа',
+        variant: 'destructive',
+      })
+      return
+    }
 
     onOpenChange(false)
     setExportType(null)
@@ -552,9 +597,9 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId, eve
         {!exportType ? (
           <>
             <DialogHeader>
-              <DialogTitle>CSV Экспорт</DialogTitle>
+              <DialogTitle>Export Data</DialogTitle>
               <DialogDescription>
-                Экспортлох мэдээллийн төрлийг сонгоно уу
+                Select the data type to export
               </DialogDescription>
             </DialogHeader>
 
@@ -580,10 +625,12 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId, eve
           <>
             <DialogHeader>
               <DialogTitle>
-                {EXPORT_OPTIONS.find(o => o.id === exportType)?.label} - CSV Экспорт
+                {EXPORT_OPTIONS.find(o => o.id === exportType)?.label} - Export
               </DialogTitle>
               <DialogDescription>
-                CSV файлд оруулах талбаруудыг сонгоно уу ({selectedFields.size}/{fields.length})
+                {exportType === 'organisations' 
+                  ? 'Select event to export organizations' 
+                  : `Select fields to include in export (${selectedFields.size}/${fields.length})`}
               </DialogDescription>
             </DialogHeader>
 
@@ -618,50 +665,54 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId, eve
                 </Select>
               </div>
 
-              {exportType === 'teams' && teamCategories.length > 0 && (
-                <div>
-                  <Label htmlFor='teamCategory' className='text-sm font-medium mb-2 block'>
-                    Баг категорээр шүүлтүүрлэх
-                  </Label>
-                  <Select value={selectedTeamCategory} onValueChange={setSelectedTeamCategory}>
-                    <SelectTrigger id='teamCategory' className='w-full'>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='all'>Бүх категори</SelectItem>
-                      {teamCategories.map(category => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+              {exportType !== 'organisations' && (
+                <>
+                  {exportType === 'teams' && teamCategories.length > 0 && (
+                    <div>
+                      <Label htmlFor='teamCategory' className='text-sm font-medium mb-2 block'>
+                        Баг категорээр шүүлтүүрлэх
+                      </Label>
+                      <Select value={selectedTeamCategory} onValueChange={setSelectedTeamCategory}>
+                        <SelectTrigger id='teamCategory' className='w-full'>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='all'>Бүх категори</SelectItem>
+                          {teamCategories.map(category => (
+                            <SelectItem key={category} value={category}>
+                              {category}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
-              <div className='flex gap-2'>
-                <Button variant='outline' size='sm' onClick={handleSelectAll}>
-                  Бүгдийг Сонгох
-                </Button>
-                <Button variant='outline' size='sm' onClick={handleDeselectAll}>
-                  Бүгдийг Цэгцлэх
-                </Button>
-              </div>
-
-              <div className='grid grid-cols-2 gap-4 border rounded-lg p-4'>
-                {fields.map(field => (
-                  <div key={field.id} className='flex items-center space-x-2'>
-                    <Checkbox
-                      id={field.id}
-                      checked={selectedFields.has(field.id)}
-                      onCheckedChange={() => handleToggleField(field.id)}
-                    />
-                    <Label htmlFor={field.id} className='cursor-pointer text-sm'>
-                      {field.label}
-                    </Label>
+                  <div className='flex gap-2'>
+                    <Button variant='outline' size='sm' onClick={handleSelectAll}>
+                      Бүгдийг Сонгох
+                    </Button>
+                    <Button variant='outline' size='sm' onClick={handleDeselectAll}>
+                      Бүгдийг Цэгцлэх
+                    </Button>
                   </div>
-                ))}
-              </div>
+
+                  <div className='grid grid-cols-2 gap-4 border rounded-lg p-4'>
+                    {fields.map(field => (
+                      <div key={field.id} className='flex items-center space-x-2'>
+                        <Checkbox
+                          id={field.id}
+                          checked={selectedFields.has(field.id)}
+                          onCheckedChange={() => handleToggleField(field.id)}
+                        />
+                        <Label htmlFor={field.id} className='cursor-pointer text-sm'>
+                          {field.label}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
 
             <DialogFooter>
@@ -671,9 +722,15 @@ export function CSVExportModal({ open, onOpenChange, registrations, eventId, eve
               <Button variant='outline' onClick={() => onOpenChange(false)}>
                 Цүүцэлэх
               </Button>
-              <Button onClick={handleExport} disabled={selectedFields.size === 0 || isLoadingData}>
-                {isLoadingData ? 'Мэдээлэл ачааллаж байна...' : 'CSV Экспорт'}
-              </Button>
+              {exportType === 'organisations' ? (
+                <Button onClick={handleExport} disabled={isLoadingData}>
+                  {isLoadingData ? 'Мэдээлэл ачааллаж байна...' : 'Export'}
+                </Button>
+              ) : (
+                <Button onClick={handleExport} disabled={selectedFields.size === 0 || isLoadingData}>
+                  {isLoadingData ? 'Мэдээлэл ачааллаж байна...' : 'Export'}
+                </Button>
+              )}
             </DialogFooter>
           </>
         )}
