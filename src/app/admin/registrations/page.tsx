@@ -6,9 +6,10 @@ import { RegistrationDetailsDialog } from '@/app/components/admin/RegistrationDe
 import { RegistrationFilters } from '@/app/components/admin/RegistrationFilters'
 import { RejectRegistrationDialog } from '@/app/components/admin/RejectRegistrationDialog'
 import { CSVExportModal } from '@/app/components/admin/CSVExportModal'
+import { AdminOrganisationReportModal } from '@/app/components/admin/AdminOrganisationReportModal'
 import { eventApi } from '@/lib/api/events'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Download, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Download, FileSpreadsheet, RefreshCw } from 'lucide-react'
 import { Link as RouterLink } from 'react-router-dom'
 import { useToast } from '@/hooks/use-toast'
 import { fetchNormalizedRegistrationsForEvent } from '@/lib/api/adminRegistrations'
@@ -36,6 +37,7 @@ export default function RegistrationsPage() {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false)
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
   const [csvExportModalOpen, setCSVExportModalOpen] = useState(false)
+  const [orgReportModalOpen, setOrgReportModalOpen] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
 
   useEffect(() => {
@@ -274,6 +276,16 @@ export default function RegistrationsPage() {
             <Button
               variant='outline'
               size='sm'
+              onClick={() => setOrgReportModalOpen(true)}
+              disabled={!selectedEventId}
+              className='w-full sm:w-auto'
+            >
+              <FileSpreadsheet size={16} className='mr-2' />
+              Org Report
+            </Button>
+            <Button
+              variant='outline'
+              size='sm'
               onClick={exportToCSV}
               disabled={filteredRegistrations.length === 0}
               className='w-full sm:w-auto'
@@ -364,6 +376,13 @@ export default function RegistrationsPage() {
         registrations={filteredRegistrations}
         eventId={selectedEventId}
         events={events}
+      />
+
+      <AdminOrganisationReportModal
+        open={orgReportModalOpen}
+        onOpenChange={setOrgReportModalOpen}
+        events={events}
+        defaultEventId={selectedEventId}
       />
     </div>
   )

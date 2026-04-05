@@ -4,6 +4,7 @@ import Coach from "../models/coach.model.js";
 import Organisation from "../models/organisation.model.js";
 import Payment from "../models/payment.model.js";
 import Event from "../models/event.model.js";
+import mongoose from "mongoose";
 
 // Export all teams with payment approved status
 export const exportTeams = async (req, res) => {
@@ -371,7 +372,13 @@ export const exportOrganisationReport = async (req, res) => {
             return res.status(400).json({ error: "eventId is required" });
         }
 
-        const organisation = await Organisation.findById(organisationId);
+        let organisation = null;
+        if (mongoose.Types.ObjectId.isValid(organisationId)) {
+            organisation = await Organisation.findById(organisationId);
+        }
+        if (!organisation) {
+            organisation = await Organisation.findOne({ organisationId });
+        }
         if (!organisation) {
             return res.status(404).json({ error: "Organisation not found" });
         }
@@ -382,7 +389,7 @@ export const exportOrganisationReport = async (req, res) => {
         }
 
         const teams = await Team.find({
-            organisationId,
+            organisationId: organisation._id,
             eventId,
             status: "active",
         })
